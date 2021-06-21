@@ -37,7 +37,8 @@ class crf_layer(hk.Module):
         
         self.ce_loss = ce_loss
     
-    def core_recursion(self, fn: Callable,
+    @staticmethod
+    def core_recursion(fn: Callable,
                        transition_matrix: jnp.ndarray,
                        prev_alphas: jnp.ndarray, 
                        logit_t: jnp.ndarray) -> jnp.ndarray:
