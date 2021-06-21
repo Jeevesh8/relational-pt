@@ -1,6 +1,6 @@
 import random
 
-from typing import Tuple
+from typing import Tuple, List
 
 from ..models.utils import get_tokenizer
 
