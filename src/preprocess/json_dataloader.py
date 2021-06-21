@@ -54,7 +54,8 @@ class load_reddit_data:
             text = self.mask_disc_markers(text)
         return text
     
-    def correct_replies(self, post_tree: dict) -> dict:
+    @staticmethod
+    def correct_replies(post_tree: dict) -> dict:
         """
         Corrects the 'replies' attribute of all comments in post_tree['comments'], by:
             1. Removing non-existent 'replies'.
@@ -71,7 +72,8 @@ class load_reddit_data:
         
         return post_tree
     
-    def remove_redundant(self, post_tree: dict) -> dict:
+    @staticmethod
+    def remove_redundant(post_tree: dict) -> dict:
         """
         Removes redundant keys from the post_tree.
         And changes the the comments list into a dictionary with the comment_id as key.
@@ -101,7 +103,8 @@ class load_reddit_data:
         
         return post_tree
     
-    def resolve_empty_comments(self, tree: dict, empty_comments: List[str]):
+    @staticmethod
+    def resolve_empty_comments(tree: dict, empty_comments: List[str]):
         """
         Finds & Removes empty comments from the tree and assigns
         children of empty comments to their parents.
@@ -150,7 +153,8 @@ class load_reddit_data:
         
         return tree
     
-    def new_branch_tree(self, tree, ids):
+    @staticmethod
+    def new_branch_tree(tree, ids):
         """
         Returns a new tree, consisting of first few comments, 
         specified by ids and the OP's text & title.
@@ -206,7 +210,8 @@ class load_reddit_data:
                 #    if branch is not None:
                 #        yield branch
     
-    def get_discourse_markers(self, filename):
+    @staticmethod
+    def get_discourse_markers(filename):
         with open(filename) as f:
             dms = f.readlines()[2:]
             dms = [elem.split(' ', 1)[1].rstrip('\n') for elem in dms]
