@@ -24,7 +24,8 @@ class tree_crf(hk.Module):
         super(tree_crf, self).__init__(name=name)
         self.prior = jnp.array(prior)
     
-    def _mst(self, log_energies: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
+    @staticmethod
+    def _mst(log_energies: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
         """Finds maximal spanning tree for a single sample. See self.mst() for 
         detailed documentation.
         """
@@ -76,7 +77,8 @@ class tree_crf(hk.Module):
         """
         return jax.vmap(self._mst, out_axes=(0,0))(log_energies)
     
-    def _score_tree(self, log_energies: jnp.ndarray, tree: jnp.ndarray) -> jnp.ndarray:
+    @staticmethod
+    def _score_tree(log_energies: jnp.ndarray, tree: jnp.ndarray) -> jnp.ndarray:
         """Finds the score of a label tree under the log_energies predicted by some model.
         See self.score_tree() for detailed documentation.
         """
