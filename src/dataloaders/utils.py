@@ -76,7 +76,8 @@ def only_inside_links(tree: List[dict]):
     for post in tree:
         if post['parent_id'] not in post_ids:
             outside_links+=1
-            assert outside_links<=1, "More than one link to posts outside the subtree exists, in the subtree: "+str(tree)
+            if outside_links > 1:
+                raise AssertionError("More than one link to posts outside the subtree exists, in the subtree: "+str(tree))
             post['parent_id'] = None
     return tree
 
