@@ -170,8 +170,8 @@ class load_reddit_data:
         """
         if id in tree['comments']:
             branch_tree['comments'][id] = tree['comments'][id]
-            for id in branch_tree['comments'][id]['replies']:
-                self.add_children(tree, branch_tree, id) 
+            for reply_id in branch_tree['comments'][id]['replies']:
+                self.add_children(tree, branch_tree, reply_id) 
         
     def branch_generator(self, tree, ids, init_tree):
         """
