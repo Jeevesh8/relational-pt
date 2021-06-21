@@ -13,8 +13,8 @@ def process_trees(trees_lis):
         del trees_lis
         sized_trees_with_roots = p.starmap(size_subtrees, trees_with_roots)
         del trees_with_roots
-        subtrees = p.starmap(subtrees_lis, sized_trees_with_roots)
-    return subtrees
+        _subtrees = p.starmap(subtrees_lis, sized_trees_with_roots)
+    return _subtrees
 
 def write_processed_trees(write_file, subtrees):
     with open(write_file, 'w+') as f:
