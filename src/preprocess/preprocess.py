@@ -7,6 +7,7 @@ from .json_dataloader import load_reddit_data
 from ..globals import stable_config
 from .utils import dict_to_full_tree, size_subtrees, subtrees_lis
 
+
 def process_trees(trees_lis):
     with Pool(5) as p:
         trees_with_roots = p.map(dict_to_full_tree, trees_lis)
@@ -16,38 +17,59 @@ def process_trees(trees_lis):
         _subtrees = p.starmap(subtrees_lis, sized_trees_with_roots)
     return _subtrees
 
+
 def write_processed_trees(write_file, subtrees):
-    with open(write_file, 'w+') as f:
+    with open(write_file, "w+") as f:
         for post_wise_subtrees in subtrees:
-            f.write('-'*14+'[NEW POST]'+'-'*3+'\n')
+            f.write("-" * 14 + "[NEW POST]" + "-" * 3 + "\n")
             for subtree in post_wise_subtrees:
-                f.write(subtree+'\n')
-        
-if __name__=='__main__':
+                f.write(subtree + "\n")
+
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_folders', type=str, nargs='+', help='Folders having data JSON files extracted from reddit.')
-    parser.add_argument('--write_folder', type=str, help='The folder where to write the processed data.')
-    parser.add_argument('--valid_size', type=int, default=0, help="Percentage of data outside train, to keep in validation data. For 10%, specify 10. Default is 0.")
+    parser.add_argument(
+        "--data_folders",
+        type=str,
+        nargs="+",
+        help="Folders having data JSON files extracted from reddit.",
+    )
+    parser.add_argument("--write_folder",
+                        type=str,
+                        help="The folder where to write the processed data.")
+    parser.add_argument(
+        "--valid_size",
+        type=int,
+        default=0,
+        help=
+        "Percentage of data outside train, to keep in validation data. For 10%, specify 10. Default is 0.",
+    )
     args = parser.parse_args()
 
-    config = stable_config+{'data_folders': args.data_folders}
+    config = stable_config + {"data_folders": args.data_folders}
     train_dl = load_reddit_data(config)
-    other_dl = load_reddit_data(config, mode='')
+    other_dl = load_reddit_data(config, mode="")
 
-    all_post_trees=[]
+    all_post_trees = []
     for tree in train_dl.tree_generator():
         all_post_trees.append(tree)
 
     subtrees = process_trees(all_post_trees)
-    write_processed_trees(os.path.join(args.write_folder, 'train.txt'), subtrees)
+    write_processed_trees(os.path.join(args.write_folder, "train.txt"),
+                          subtrees)
     del subtrees
 
-    all_post_trees=[]
+    all_post_trees = []
     for tree in other_dl.tree_generator():
         all_post_trees.append(tree)
-    
-    subtrees = process_trees(all_post_trees)
-    write_processed_trees(os.path.join(args.write_folder, 'valid.txt'), subtrees[:(args.valid_size*len(subtrees))//100])
-    write_processed_trees(os.path.join(args.write_folder, 'test.txt'), subtrees[(args.valid_size*len(subtrees))//100:])
-    del subtrees
 
+    subtrees = process_trees(all_post_trees)
+    write_processed_trees(
+        os.path.join(args.write_folder, "valid.txt"),
+        subtrees[:(args.valid_size * len(subtrees)) // 100],
+    )
+    write_processed_trees(
+        os.path.join(args.write_folder, "test.txt"),
+        subtrees[(args.valid_size * len(subtrees)) // 100:],
+    )
+    del subtrees
