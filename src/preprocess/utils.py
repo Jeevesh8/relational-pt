@@ -67,7 +67,7 @@ def size_subtrees(tree: dict, root: str, tokenizer=get_tokenizer(), extra_tokens
         tree[root]['subtree_size'] = self_length
         return self_length
     
-    entire_tree_length = core_recursion(tree, root)
+    unused_entire_tree_length = core_recursion(tree, root)
     
     return tree, root
 
