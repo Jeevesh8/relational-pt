@@ -218,5 +218,5 @@ class load_reddit_data:
         """
         for tree in self.tree_generator():
             yield tree['title'] + ' ' + tree['selftext']
-            for id, comment in tree['comments'].items():
+            for _, comment in tree['comments'].items():
                 yield comment['body']

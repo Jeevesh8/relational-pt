@@ -43,7 +43,7 @@ class tree_crf(hk.Module):
             
             edges.append(max_link)
             
-            link_from, link_to, rel_type = max_index
+            link_from, link_to, unused_rel_type = max_index
             from_partition = jnp.where(partitions[link_from, :]==1, jnp.arange(M), -1)
             to_partition = jnp.where(partitions[link_to, :]==1, jnp.arange(M), -1)
             
