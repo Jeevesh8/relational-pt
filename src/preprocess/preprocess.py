@@ -16,9 +16,9 @@ def process_trees(trees_lis):
         _subtrees = p.starmap(subtrees_lis, sized_trees_with_roots)
     return _subtrees
 
-def write_processed_trees(write_file, subtrees):
+def write_processed_trees(write_file, _subtrees):
     with open(write_file, 'w+') as f:
-        for post_wise_subtrees in subtrees:
+        for post_wise_subtrees in _subtrees:
             f.write('-'*14+'[NEW POST]'+'-'*3+'\n')
             for subtree in post_wise_subtrees:
                 f.write(subtree+'\n')
