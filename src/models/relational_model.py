@@ -68,12 +68,12 @@ class relational_model(hk.Module):
         choices = jnp.flip(jnp.sort(jnp.where(choice_mask, jnp.arange(jnp.shape(choice_mask)[0]), -1)))
         indices = choices[:self.max_comps-1]
         
-        embds = add_garbage_dims(embds)
+        embds = jnp.pad(embds, pad_width=((0,1), (0,0)))
+
         from_embds = jnp.take_along_axis(embds,
                                          jnp.expand_dims(indices, axis=-1),
                                          axis=0)
-        embds = remove_garbage_dims(embds)
-
+        
         from_embds = jnp.pad(
             from_embds,
             pad_width=((1, 0), (0, 0)),
@@ -85,7 +85,9 @@ class relational_model(hk.Module):
 
         log_energies = jnp.dot(from_embds, to_embds)
 
-        return self._format_log_energies(log_energies, indices==-1)
+        pad_mask = jnp.pad(indices!=-1, pad_width=(1,0), constant_values=1)
+
+        return self._format_log_energies(log_energies, pad_mask)
 
     def __call__(self, embds: jnp.ndarray,
                  choice_mask: jnp.ndarray) -> jnp.ndarray:

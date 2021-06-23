@@ -186,7 +186,8 @@ if __name__ == "__main__":
                               dtype=jnp.int32)
     sample_comp_labels = jax.random.randint(
         key, (config["batch_size"], stable_config["max_len"]), 0, 2)
-    sample_relations = jax.random.randint(key, (stable_config["max_comps"], 3),
+    
+    sample_relations = jax.random.randint(key, (config['batch_size'], stable_config["max_comps"], 3),
                                           0, stable_config["max_comps"])
     sample_relations = jnp.where(jnp.array([True, True, False]),
                                  sample_relations, 0)

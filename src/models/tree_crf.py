@@ -25,7 +25,7 @@ class tree_crf(hk.Module):
 
         """
         super(tree_crf, self).__init__(name=name)
-        self.prior = jnp.array(prior)
+        #self.prior = jnp.array(prior)
 
     @staticmethod
     def _mst(log_energies: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
@@ -33,13 +33,12 @@ class tree_crf(hk.Module):
         detailed documentation.
         """
         M, n_rel_types = log_energies.shape[1], log_energies.shape[2]
-        partitions = jnp.eye(M, dtype=jnp.bool)  # jnp.diag(jnp.arange(M))
+        partitions = jnp.eye(M, dtype=jnp.bool_)  # jnp.diag(jnp.arange(M))
         mst_energy = jnp.array([0.0])
         edges = []
 
         for _ in range(M):
-            max_index = jnp.where(
-                log_energies == jnp.max(log_energies, keepdims=True))
+            max_index = jnp.unravel_index(jnp.argmax(log_energies), jnp.shape(log_energies))
             max_energy = log_energies[max_index]
             updatable_sample = jnp.logical_not(jnp.isneginf(max_energy))
             mst_energy += jnp.where(updatable_sample, max_energy, 0.0)
@@ -115,7 +114,7 @@ class tree_crf(hk.Module):
         new_log_energies = jax.ops.index_update(log_energies, (0, 0, 0), 0.0)
         score = jnp.array([0.0])
         for edge in tree:
-            score += new_log_energies[edge]
+            score += new_log_energies[edge[0], edge[1], edge[2]]
         return score
 
     def score_tree(self, log_energies: jnp.ndarray,
