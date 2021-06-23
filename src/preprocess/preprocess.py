@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     subtrees = process_trees(all_post_trees)
     num_valid = int(args.valid_size * len(subtrees)) // 100
-    
+
     write_processed_trees(
         os.path.join(args.write_folder, "valid.txt"),
         subtrees[:num_valid],
