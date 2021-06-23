@@ -3,9 +3,9 @@ import argparse
 
 from multiprocessing import Pool, set_executable
 
-from .json_dataloader import load_reddit_data
-from ..globals import stable_config
-from .utils import dict_to_full_tree, size_subtrees, subtrees_lis
+from src.preprocess.json_dataloader import load_reddit_data
+from src.globals import stable_config
+from src.preprocess.utils import dict_to_full_tree, size_subtrees, subtrees_lis
 
 
 def process_trees(trees_lis):
