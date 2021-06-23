@@ -25,7 +25,7 @@ class tree_crf(hk.Module):
 
         """
         super(tree_crf, self).__init__(name=name)
-        #self.prior = jnp.array(prior)
+        # self.prior = jnp.array(prior)
 
     @staticmethod
     def _mst(log_energies: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
@@ -38,7 +38,8 @@ class tree_crf(hk.Module):
         edges = []
 
         for _ in range(M):
-            max_index = jnp.unravel_index(jnp.argmax(log_energies), jnp.shape(log_energies))
+            max_index = jnp.unravel_index(jnp.argmax(log_energies),
+                                          jnp.shape(log_energies))
             max_energy = log_energies[max_index]
             updatable_sample = jnp.logical_not(jnp.isneginf(max_energy))
             mst_energy += jnp.where(updatable_sample, max_energy, 0.0)
