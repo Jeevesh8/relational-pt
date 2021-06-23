@@ -7,8 +7,8 @@ import jax.numpy as jnp
 from ..params import config
 
 
-def relational_metric(prediction: List[List[int, int, int]],
-                      reference: List[List[int, int, int]]) -> Tuple[int, int]:
+def relational_metric(prediction: List[List[int]],
+                      reference: List[List[int]]) -> Tuple[int, int]:
     """
     Args:
         prediction:  A list of lists of form (i,j,k) where the tuple indicates a link from i to j of type k.

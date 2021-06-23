@@ -4,3 +4,6 @@ jax
 dm-haiku
 sentencepiece
 git+https://github.com/huggingface/transformers
+flax
+optax
+datasets
