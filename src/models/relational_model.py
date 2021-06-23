@@ -1,3 +1,4 @@
+from src.models.utils import add_garbage_dims, remove_garbage_dims
 from typing import Optional
 
 import jax
@@ -64,15 +65,18 @@ class relational_model(hk.Module):
     def _call(self, embds: jnp.ndarray,
               choice_mask: jnp.ndarray) -> jnp.ndarray:
         """Single sample version of self.__call__(). See the same for documentation."""
-        indices = jnp.where(choice_mask)
+        choices = jnp.flip(jnp.sort(jnp.where(choice_mask, jnp.arange(jnp.shape(choice_mask)[0]), -1)))
+        indices = choices[:self.max_comps-1]
+        
+        embds = add_garbage_dims(embds)
         from_embds = jnp.take_along_axis(embds,
                                          jnp.expand_dims(indices, axis=-1),
                                          axis=0)
-        extra_comps_to_pad = self.M - jnp.shape(indices)[0] - 1
+        embds = remove_garbage_dims(embds)
 
         from_embds = jnp.pad(
             from_embds,
-            pad_width=((1, extra_comps_to_pad), (0, 0)),
+            pad_width=((1, 0), (0, 0)),
             constant_values=((1, 0), (0, 0)),
         )
 
@@ -81,10 +85,7 @@ class relational_model(hk.Module):
 
         log_energies = jnp.dot(from_embds, to_embds)
 
-        pad_mask = jnp.array([1] * (self.M - extra_comps_to_pad) +
-                             [0] * extra_comps_to_pad)
-
-        return self._format_log_energies(log_energies, pad_mask)
+        return self._format_log_energies(log_energies, indices==-1)
 
     def __call__(self, embds: jnp.ndarray,
                  choice_mask: jnp.ndarray) -> jnp.ndarray:
