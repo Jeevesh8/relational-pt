@@ -1,4 +1,4 @@
-from typing import Optional, Any, List, Tuple
+from typing import Optional, Union, List, Tuple
 import jax
 import jax.numpy as jnp
 import haiku as hk
@@ -9,7 +9,7 @@ from .utils import add_garbage_dims, remove_garbage_dims
 class tree_crf(hk.Module):
     def __init__(
         self,
-        prior: Optional[Any[List[List[List[float]]], jnp.ndarray]] = None,
+        prior: Optional[Union[List[List[List[float]]], jnp.ndarray]] = None,
         name: Optional[str] = None,
     ):
         """Constructs a CRF layer that assigns potentials to all different possible trees
@@ -129,7 +129,7 @@ class tree_crf(hk.Module):
         """
         return jax.vmap(self._score_tree)(log_energies, tree)
 
-    def disc_loss(self, log_energies: jnp.ndaray,
+    def disc_loss(self, log_energies: jnp.ndarray,
                   label_tree: jnp.ndarray) -> jnp.ndarray:
         """Calculates average loss of a batch of samples.
         Args:

@@ -1,5 +1,7 @@
 import os
 import argparse
+import copy
+import random
 
 from multiprocessing import Pool, set_executable
 
@@ -46,7 +48,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    config = stable_config + {"data_folders": args.data_folders}
+    config = copy.deepcopy(stable_config)
+    config["data_folders"] = args.data_folders
+    
     train_dl = load_reddit_data(config)
     other_dl = load_reddit_data(config, mode="")
 
@@ -64,6 +68,7 @@ if __name__ == "__main__":
         all_post_trees.append(tree)
 
     subtrees = process_trees(all_post_trees)
+    random.shuffle(subtrees)
     num_valid = int(args.valid_size * len(subtrees)) // 100
 
     write_processed_trees(

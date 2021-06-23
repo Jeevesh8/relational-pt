@@ -1,0 +1,6 @@
+jsonlist
+jaxlib
+jax
+dm-haiku
+sentencepiece
+git+https://github.com/huggingface/transformers
