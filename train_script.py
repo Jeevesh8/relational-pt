@@ -32,13 +32,18 @@ def relation_prediction_loss(embds, choice_mask, label_relations, max_comps,
     log_energies = model1(embds, choice_mask)
     return tree_crf().disc_loss(log_energies, label_relations)
 
-relation_prediction_loss = partial(relation_prediction_loss,
-                                   max_comps=stable_config["max_comps"],
-                                   embed_dim=stable_config["embed_dim"])
+
+relation_prediction_loss = partial(
+    relation_prediction_loss,
+    max_comps=stable_config["max_comps"],
+    embed_dim=stable_config["embed_dim"],
+)
+
 
 def predict_components(logits, lengths):
     return crf_layer(n_classes=2).batch_viterbi_decode(
         hk.Linear(2)(logits), lengths)[0]
+
 
 def predict_relations(embds, choice_mask, max_comps, embed_dim):
     model1 = relational_model(n_rels=1,
@@ -47,9 +52,13 @@ def predict_relations(embds, choice_mask, max_comps, embed_dim):
     log_energies = model1(embds, choice_mask)
     return tree_crf().mst(log_energies)[1]
 
-predict_relations = partial(predict_relations,
-                            max_comps=stable_config["max_comps"],
-                            embed_dim=stable_config["embed_dim"])
+
+predict_relations = partial(
+    predict_relations,
+    max_comps=stable_config["max_comps"],
+    embed_dim=stable_config["embed_dim"],
+)
+
 
 def train_step(state, batch, key):
 
