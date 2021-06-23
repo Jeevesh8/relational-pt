@@ -69,10 +69,15 @@ def dict_to_inputs(
 
     input_ids = reduce(lambda x, y: x + y, encodings, [])
 
-    #It is valid to truncate like this becuase the only subtrees whose encodings are greater than config['max_len'] are ones with just single posts,
-    #(see preprocess.py for how subtrees are generated). One may worry that some component present in relations may get truncated from inpu text,
-    #But this is not the case as the relations only contains (1, 0, 0).
-    return input_ids[:config['max_len']], post_tags[:config['max_len']], user_tags[:config['max_len']], relations
+    # It is valid to truncate like this becuase the only subtrees whose encodings are greater than config['max_len'] are ones with just single posts,
+    # (see preprocess.py for how subtrees are generated). One may worry that some component present in relations may get truncated from inpu text,
+    # But this is not the case as the relations only contains (1, 0, 0).
+    return (
+        input_ids[:config["max_len"]],
+        post_tags[:config["max_len"]],
+        user_tags[:config["max_len"]],
+        relations,
+    )
 
 
 def only_inside_links(tree: List[dict]):
