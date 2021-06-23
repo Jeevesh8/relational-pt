@@ -7,3 +7,4 @@ git+https://github.com/huggingface/transformers
 flax
 optax
 datasets
+seqeval

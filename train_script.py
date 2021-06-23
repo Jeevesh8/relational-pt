@@ -19,6 +19,10 @@ from src.models import crf_layer, tree_crf, relational_model
 from src.training.utils import load_relational_metric, batch_to_post_tags
 from src.dataloaders.text_file_loader import get_tfds_dataset
 
+import jax.tools.colab_tpu
+jax.tools.colab_tpu.setup_tpu()
+
+print("Devices detected: ", jax.local_devices())
 
 def comp_prediction_loss(logits, lengths, label_tags):
     return crf_layer(n_classes=2)(hk.Linear(2)(logits), lengths, label_tags)
@@ -174,7 +178,7 @@ if __name__ == "__main__":
     params = {}
 
     sample_logits = jnp.zeros(
-        (config["batch_size"], stable_config["max_len"], config["embed_dim"]),
+        (config["batch_size"], stable_config["max_len"], stable_config["embed_dim"]),
         dtype=jnp.float32,
     )
     sample_lengths = jnp.full((config["batch_size"]),
@@ -193,7 +197,7 @@ if __name__ == "__main__":
                                              sample_comp_labels)
 
     key, subkey = jax.random.split(key)
-    params["relation_predictor"] = pure_rpl.init(subkey,
+    params["relation_predictor"] = pure_rpl.init(subkey, sample_logits,
                                                  sample_comp_labels == 0,
                                                  sample_relations)
 

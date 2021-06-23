@@ -54,7 +54,7 @@ def batch_to_relational_lists(predictions: jnp.ndarray,
 
 class relation_match_metric:
     def __init__(self, n_processes=None):
-        super().__init__(self)
+        super().__init__()
         self.common_relations = 0
         self.total_relations = 0
         if n_processes is None:
