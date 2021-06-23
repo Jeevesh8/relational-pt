@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Callable
 
 from src.models.utils import get_tokenizer
 
@@ -54,6 +55,12 @@ def predict_relations(embds, choice_mask, max_comps, embed_dim):
 predict_relations = partial(predict_relations,
                             max_comps=stable_config["max_comps"],
                             embed_dim=stable_config["embed_dim"])
+
+class TrainState(train_state.TrainState):
+    comp_prediction_loss: Callable = flax.struct.field(pytree_node=False)
+    relation_prediction_loss: Callable = flax.struct.field(pytree_node=False)
+    comp_predictor: Callable = flax.struct.field(pytree_node=False)
+    relation_predictor: Callable = flax.struct.field(pytree_node=False)
 
 def train_step(state, batch, key):
 
@@ -206,7 +213,7 @@ if __name__ == "__main__":
 
     opt = optax.chain(optax.adam(learning_rate=config["lr"]))
 
-    init_train_state = train_state.TrainState.create(
+    init_train_state = TrainState.create(
         apply_fn=transformer_model.__call__,
         params=params,
         tx=opt,
