@@ -35,9 +35,9 @@ def relation_prediction_loss(embds, choice_mask, label_relations, max_comps,
     return tree_crf().disc_loss(log_energies, label_relations)
 
 
-def predict_components(logits, lengths, label_tags):
+def predict_components(logits, lengths):
     return crf_layer(n_classes=2).batch_viterbi_decode(
-        hk.Linear(2)(logits), lengths, label_tags)[0]
+        hk.Linear(2)(logits), lengths)[0]
 
 
 @partial(max_comps=stable_config["max_comps"],
@@ -122,7 +122,7 @@ def get_preds(state, batch, key):
     )
 
     comp_preds = state.comp_predictor(params["comp_predictor"], key, logits,
-                                      lengths, batch.post_tags)
+                                      lengths)
 
     embds = state.apply_fn(
         batch.input_ids,
@@ -133,7 +133,7 @@ def get_preds(state, batch, key):
         train=False,
     )
 
-    rel_preds = state.relation_prediction_loss(
+    rel_preds = state.relation_predictor(
         params["relation_predictor"],
         key,
         embds,
