@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     config = copy.deepcopy(stable_config)
     config["data_folders"] = args.data_folders
-    
+
     train_dl = load_reddit_data(config)
     other_dl = load_reddit_data(config, mode="")
 
