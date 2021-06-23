@@ -39,7 +39,7 @@ if __name__ == "__main__":
                         help="The folder where to write the processed data.")
     parser.add_argument(
         "--valid_size",
-        type=int,
+        type=float,
         default=0,
         help=
         "Percentage of data outside train, to keep in validation data. For 10%, specify 10. Default is 0.",
@@ -64,12 +64,14 @@ if __name__ == "__main__":
         all_post_trees.append(tree)
 
     subtrees = process_trees(all_post_trees)
+    num_valid = int(args.valid_size * len(subtrees)) // 100
+    
     write_processed_trees(
         os.path.join(args.write_folder, "valid.txt"),
-        subtrees[:(args.valid_size * len(subtrees)) // 100],
+        subtrees[:num_valid],
     )
     write_processed_trees(
         os.path.join(args.write_folder, "test.txt"),
-        subtrees[(args.valid_size * len(subtrees)) // 100:],
+        subtrees[num_valid:],
     )
     del subtrees

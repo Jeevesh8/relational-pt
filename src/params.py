@@ -11,4 +11,8 @@ config = {
     'batch_size': 2,
     'post_tags' : {'B':0, 'I': 1},
     'user_tags' : [{'B': i, 'I': i+1} for i in range(1, stable_config['max_users']*2, 2)],
+    'n_epochs': 5,
+    'lr': 0.0001,
+    'train_files': ['./train.txt'],
+    'valid_files': ['./valid.txt']
 }

@@ -56,4 +56,4 @@ def get_tfds_dataset(file_lis, config):
                                                    config['pad_for']['user_tags'],
                                                    config['pad_for']['relations'])).batch(stable_config['num_devices'])
     
-    return dataset
+    return dataset.as_numpy_iterator()

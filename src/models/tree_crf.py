@@ -104,7 +104,7 @@ class tree_crf(hk.Module):
                j-th edge (link_from, link_to, relation_type) added to the MST of i-th sample. The tensor
                is padded with (0,0,0) jnp.ndarrays.
         """
-        return jax.vmap(self._mst, out_axes=(0, 0))(log_energies)
+        return jax.vmap(self._mst)(log_energies)
 
     @staticmethod
     def _score_tree(log_energies: jnp.ndarray,
@@ -127,7 +127,7 @@ class tree_crf(hk.Module):
         Returns:
             A tensor of size [batch_size] having the score of each tree corresponding to each sample of the batch.
         """
-        return jax.vmap(self._score_tree, in_axes=(0, 0))(log_energies, tree)
+        return jax.vmap(self._score_tree)(log_energies, tree)
 
     def disc_loss(self, log_energies: jnp.ndaray,
                   label_tree: jnp.ndarray) -> jnp.ndarray:

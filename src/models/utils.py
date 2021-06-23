@@ -6,7 +6,7 @@ from ..globals import stable_config
 sp_tokens = ["[URL]","[STARTQ]","[ENDQ]","[UNU]"]+ ["[USER"+str(i)+"]" for i in range(stable_config['max_users'])]
 
 def get_tokenizer():
-    tokenizer = BigBirdTokenizer.from_pretrained('google/bigbird-roberta-base')
+    tokenizer = BigBirdTokenizer.from_pretrained(stable_config['checkpoint'])
     tokenizer.add_tokens(sp_tokens)
     return tokenizer
 
