@@ -65,9 +65,12 @@ class relational_model(hk.Module):
     def _call(self, embds: jnp.ndarray,
               choice_mask: jnp.ndarray) -> jnp.ndarray:
         """Single sample version of self.__call__(). See the same for documentation."""
-        choices = jnp.flip(jnp.sort(jnp.where(choice_mask, jnp.arange(jnp.shape(choice_mask)[0]), -1)))
-        indices = choices[:self.max_comps-1]
-        
+        choices = jnp.flip(
+            jnp.sort(
+                jnp.where(choice_mask, jnp.arange(jnp.shape(choice_mask)[0]),
+                          -1)))
+        indices = choices[:self.max_comps - 1]
+
         embds = add_garbage_dims(embds)
         from_embds = jnp.take_along_axis(embds,
                                          jnp.expand_dims(indices, axis=-1),
@@ -85,7 +88,7 @@ class relational_model(hk.Module):
 
         log_energies = jnp.dot(from_embds, to_embds)
 
-        return self._format_log_energies(log_energies, indices==-1)
+        return self._format_log_energies(log_energies, indices == -1)
 
     def __call__(self, embds: jnp.ndarray,
                  choice_mask: jnp.ndarray) -> jnp.ndarray:
