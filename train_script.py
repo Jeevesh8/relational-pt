@@ -223,7 +223,7 @@ if __name__ == "__main__":
         relation_predictor=pure_pr.apply,
     )
 
-    key = jax.random.split(key, config["num_devices"])
+    key = jax.random.split(key, stable_config["num_devices"])
 
     parallel_train_step = jax.pmap(train_step, axis_name="device_axis")
 

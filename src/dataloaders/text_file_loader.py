@@ -6,6 +6,12 @@ from multiprocessing import Pool
 from .utils import only_inside_links, tree_ids_to_nos, dict_to_inputs
 from ..globals import stable_config
 
+def remove_artifacts(tree):
+    """Removes some artifacts introduced by the preprocessing steps from tree['body']
+    Additionally, modify this function to distort/modify post-wise text from the training files."""
+    for post in tree:
+        post['body'] = post['body'].replace("  ", " ")
+    return tree
 
 def get_all_trees(read_file):
     with open(read_file) as f:
@@ -36,6 +42,8 @@ def get_all_trees(read_file):
 
 def format_data(tree_with_post_parent_user_no):
     with Pool(5) as p:
+        tree_with_post_parent_user_no = p.map(remove_artifacts,
+                                              tree_with_post_parent_user_no)
         tree_with_post_parent_user_no = p.map(only_inside_links,
                                               tree_with_post_parent_user_no)
         tree_with_post_parent_user_no = p.map(tree_ids_to_nos,
