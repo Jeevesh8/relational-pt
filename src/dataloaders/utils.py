@@ -6,6 +6,7 @@ from ..models.utils import get_tokenizer
 from ..params import config
 from ..globals import stable_config
 
+
 def dict_to_inputs(
     tree: List[dict],
     tokenizer=get_tokenizer(),
