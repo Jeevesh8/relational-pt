@@ -3,7 +3,7 @@ import tensorflow as tf
 
 from multiprocessing import Pool
 
-from .utils import only_inside_links, tree_ids_to_nos, dict_to_inputs
+from .utils import convert_to_named_tuple, only_inside_links, tree_ids_to_nos, dict_to_inputs
 from ..globals import stable_config
 
 def remove_artifacts(tree):
@@ -91,6 +91,6 @@ def get_tfds_dataset(file_lis, config):
             config["pad_for"]["user_tags"],
             config["pad_for"]["relations"],
         ),
-    ).batch(stable_config["num_devices"])
+    ).batch(stable_config["num_devices"]).map(convert_to_named_tuple)
 
     return dataset.as_numpy_iterator()

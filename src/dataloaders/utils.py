@@ -134,6 +134,5 @@ modelInp = namedtuple("modelInp",
                       ["input_ids", "post_tags", "user_tags", "relations"])
 
 
-def convert_to_named_tuple(elem):
-    input_ids, post_tags, user_tags, relations = elem
+def convert_to_named_tuple(input_ids, post_tags, user_tags, relations):
     return modelInp(input_ids, post_tags, user_tags, relations)
