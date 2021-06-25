@@ -3,15 +3,22 @@ import tensorflow as tf
 
 from multiprocessing import Pool
 
-from .utils import convert_to_named_tuple, only_inside_links, tree_ids_to_nos, dict_to_inputs
+from .utils import (
+    convert_to_named_tuple,
+    only_inside_links,
+    tree_ids_to_nos,
+    dict_to_inputs,
+)
 from ..globals import stable_config
+
 
 def remove_artifacts(tree):
     """Removes some artifacts introduced by the preprocessing steps from tree['body']
     Additionally, modify this function to distort/modify post-wise text from the training files."""
     for post in tree:
-        post['body'] = post['body'].replace("  ", " ")
+        post["body"] = post["body"].replace("  ", " ")
     return tree
+
 
 def get_all_trees(read_file):
     with open(read_file) as f:
@@ -77,7 +84,7 @@ def get_tfds_dataset(file_lis, config):
         ),
     )
 
-    dataset = dataset.padded_batch(
+    dataset = (dataset.padded_batch(
         config["batch_size"],
         padded_shapes=(
             [stable_config["max_len"]],
@@ -91,6 +98,6 @@ def get_tfds_dataset(file_lis, config):
             config["pad_for"]["user_tags"],
             config["pad_for"]["relations"],
         ),
-    ).batch(stable_config["num_devices"]).map(convert_to_named_tuple)
+    ).batch(stable_config["num_devices"]).map(convert_to_named_tuple))
 
     return dataset.as_numpy_iterator()
