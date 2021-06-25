@@ -16,8 +16,7 @@ def get_tokenizer():
 
 def add_garbage_dims(array):
     """Adds extra slice at last of every dimension, filled with zeros."""
-    return jnp.pad(array, pad_width=((0,1) for _ in jnp.shape(array)))
-    
+    return jnp.pad(array, pad_width=((0, 1) for _ in jnp.shape(array)))
     """FOR-LOOP equivalent
     for i, _ in enumerate(array.shape):
         array = jnp.concatenate(
@@ -33,6 +32,7 @@ def add_garbage_dims(array):
         )
     return array
     """
+
 
 def remove_garbage_dims(array):
     """Removes extra slice at last of every dimension, filled with zeros,
