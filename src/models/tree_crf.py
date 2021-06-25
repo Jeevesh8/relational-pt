@@ -25,7 +25,8 @@ class tree_crf(hk.Module):
 
         """
         super(tree_crf, self).__init__(name=name)
-        #self.prior = jnp.array(prior)
+        if self.prior is not None:
+            raise NotImplementedError("The prior functionality will be implemented in future.")
 
     @staticmethod
     def _mst(log_energies: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
@@ -33,10 +34,69 @@ class tree_crf(hk.Module):
         detailed documentation.
         """
         M, n_rel_types = log_energies.shape[1], log_energies.shape[2]
-        partitions = jnp.eye(M, dtype=jnp.bool_)  # jnp.diag(jnp.arange(M))
+        partitions = jnp.eye(M, dtype=jnp.bool_)
         mst_energy = jnp.array([0.0])
         edges = []
+        
+        def scan_fn(carry, x):
+            _ = x
+            mst_energy, log_energies, partitions = carry
+            
+            max_index = jnp.unravel_index(jnp.argmax(log_energies), jnp.shape(log_energies))
+            max_energy = log_energies[max_index]
+            updatable_sample = jnp.logical_not(jnp.isneginf(max_energy))
+            mst_energy += jnp.where(updatable_sample, max_energy, 0.0)
+            max_link = jnp.where(
+                jnp.stack([updatable_sample] * n_rel_types, axis=-1),
+                jnp.squeeze(jnp.transpose(jnp.array(max_index))),
+                0.0,
+            )
 
+            link_from, link_to, unused_rel_type = max_index
+            from_partition = jnp.where(partitions[link_from, :] == 1,
+                                       jnp.arange(M), -1)
+            to_partition = jnp.where(partitions[link_to, :] == 1,
+                                     jnp.arange(M), -1)
+
+            log_energies = add_garbage_dims(log_energies)
+            log_energies = jax.ops.index_update(
+                log_energies,
+                (
+                    from_partition,
+                    jnp.expand_dims(to_partition, axis=-1),
+                    jnp.arange(n_rel_types),
+                ),
+                -jnp.inf,
+            )
+            log_energies = jax.ops.index_update(
+                log_energies,
+                (
+                    to_partition,
+                    jnp.expand_dims(from_partition, axis=-1),
+                    jnp.arange(n_rel_types),
+                ),
+                -jnp.inf,
+            )
+            log_energies = remove_garbage_dims(log_energies)
+
+            temp = jnp.logical_or(partitions[link_from, :],
+                                  partitions[link_to, :])
+            temp_idx = jnp.where(temp, jnp.arange(M), -1)
+
+            partitions = add_garbage_dims(partitions)
+            partitions = jax.ops.index_update(
+                partitions,
+                (jnp.expand_dims(temp_idx, axis=-1), jnp.arange(M)), temp)
+            partitions = remove_garbage_dims(partitions)
+            
+            return (mst_energy, log_energies, partitions), max_link
+        
+        (mst_energy, _, _), edges = jax.lax.scan(scan_fn,
+                                                init=(mst_energy, log_energies, partitions),
+                                                xs=jnp.arange(M))
+        return mst_energy, edges
+
+        """FOR-LOOP equivalent
         for _ in range(M):
             max_index = jnp.unravel_index(jnp.argmax(log_energies), jnp.shape(log_energies))
             max_energy = log_energies[max_index]
@@ -88,7 +148,7 @@ class tree_crf(hk.Module):
             partitions = remove_garbage_dims(partitions)
 
         return mst_energy, jnp.concatenate(edges)
-
+        """
     def mst(self,
             log_energies: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
         """Finds the maximal spanning tree and its score.
@@ -112,11 +172,22 @@ class tree_crf(hk.Module):
         See self.score_tree() for detailed documentation.
         """
         new_log_energies = jax.ops.index_update(log_energies, (0, 0, 0), 0.0)
+
+        def scan_fn(carry, x):
+            edge = x
+            score = carry
+            return score+new_log_energies[edge[0], edge[1], edge[2]], None
+        
+        score, _ = jax.lax.scan(scan_fn,
+                                init=jnp.array([0.0]),
+                                xs=tree)
+        """FOR-LOOP equivalent
         score = jnp.array([0.0])
         for edge in tree:
             score += new_log_energies[edge[0], edge[1], edge[2]]
+        """
         return score
-
+        
     def score_tree(self, log_energies: jnp.ndarray,
                    tree: jnp.ndarray) -> jnp.ndarray:
         """Calculates the log energies of a given batch of trees.
