@@ -61,10 +61,11 @@ class TrainState(train_state.TrainState):
     relation_prediction_loss: Callable = flax.struct.field(pytree_node=False)
     comp_predictor: Callable = flax.struct.field(pytree_node=False)
     relation_predictor: Callable = flax.struct.field(pytree_node=False)
+    config: dict = flax.struct.field(pytree_node=False)
 
 def train_step(state, batch, key):
 
-    attention_mask = batch.input_ids != state.config["tokenizer"].pad_token_id
+    attention_mask = batch.input_ids != state.config["pad_for"]['input_ids']
     lengths = jnp.sum(attention_mask, axis=-1)
 
     def comp_prediction_loss(params, key):
@@ -75,7 +76,7 @@ def train_step(state, batch, key):
             params=params["embds_params"],
             dropout_rng=subkey,
             train=True,
-        )
+        )['last_hidden_state']
         return state.comp_prediction_loss(params["comp_predictor"], key,
                                           logits, lengths, batch.post_tags)
 
@@ -94,12 +95,12 @@ def train_step(state, batch, key):
             params=params["embds_params"],
             dropout_rng=subkey,
             train=True,
-        )
+        )['last_hidden_state']
         return state.relation_prediction_loss(
             params["relation_predictor"],
             key,
             embds,
-            batch.post_tags == config["post_tags"]["B"],
+            batch.post_tags == state.config["post_tags"]["B"],
             batch.relations,
         )
 
@@ -111,9 +112,9 @@ def train_step(state, batch, key):
 
     losses = {
         "comp_pred_loss":
-        jax.lax.pmean(_comp_prediction_loss, axis="device_axis"),
+        jax.lax.pmean(_comp_prediction_loss, axis_name="device_axis"),
         "rel_pred_loss":
-        jax.lax.pmean(_relation_prediction_loss, axis="deivce_axis"),
+        jax.lax.pmean(_relation_prediction_loss, axis_name="device_axis"),
     }
 
     return new_new_state, losses, key
@@ -122,7 +123,7 @@ def train_step(state, batch, key):
 @jax.pmap
 def get_preds(state, batch, key):
 
-    attention_mask = batch.input_ids != state.config["tokenizer"].pad_token_id
+    attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
     lengths = jnp.sum(attention_mask, axis=-1)
 
     logits = state.apply_fn(
@@ -131,7 +132,7 @@ def get_preds(state, batch, key):
         params=params["embds_params"],
         dropout_rng=key,
         train=False,
-    )
+    )['last_hidden_state']
 
     comp_preds = state.comp_predictor(params["comp_predictor"], key, logits,
                                       lengths)
@@ -143,13 +144,13 @@ def get_preds(state, batch, key):
         params=params["embds_params"],
         dropout_rng=key,
         train=False,
-    )
+    )['last_hidden_state']
 
     rel_preds = state.relation_predictor(
         params["relation_predictor"],
         key,
         embds,
-        batch.post_tags == config["post_tags"]["B"],
+        batch.post_tags == state.config["post_tags"]["B"],
     )
 
     return comp_preds, rel_preds
@@ -221,6 +222,7 @@ if __name__ == "__main__":
         relation_prediction_loss=pure_rpl.apply,
         comp_predictor=pure_pc.apply,
         relation_predictor=pure_pr.apply,
+        config=config,
     )
 
     key = jax.random.split(key, stable_config["num_devices"])

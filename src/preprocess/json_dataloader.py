@@ -53,6 +53,7 @@ class load_reddit_data:
         text = re.sub(r"\n", " ", text)
         text = text.rstrip(" _\n\t")
         text = re.sub(r"\n", " ", text)
+        text = re.sub(r"\r", " ", text)
         text = text.lower()
         if self.mask_dms:
             text = self.mask_disc_markers(text)

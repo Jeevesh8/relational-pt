@@ -4,7 +4,7 @@ from collections import namedtuple
 
 from ..models.utils import get_tokenizer
 from ..params import config
-
+from ..globals import stable_config
 
 def dict_to_inputs(
     tree: List[dict],
@@ -73,9 +73,9 @@ def dict_to_inputs(
     # (see preprocess.py for how subtrees are generated). One may worry that some component present in relations may get truncated from inpu text,
     # But this is not the case as the relations only contains (1, 0, 0).
     return (
-        input_ids[:config["max_len"]],
-        post_tags[:config["max_len"]],
-        user_tags[:config["max_len"]],
+        input_ids[:stable_config["max_len"]],
+        post_tags[:stable_config["max_len"]],
+        user_tags[:stable_config["max_len"]],
         relations,
     )
 
