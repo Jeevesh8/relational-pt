@@ -25,6 +25,7 @@ class tree_crf(hk.Module):
 
         """
         super(tree_crf, self).__init__(name=name)
+        self.prior = prior
         if self.prior is not None:
             raise NotImplementedError("The prior functionality will be implemented in future.")
 
