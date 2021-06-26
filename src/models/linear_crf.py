@@ -147,7 +147,7 @@ class crf_layer(hk.Module):
                                              init=prev_alphas,
                                              xs=jnp.arange(1, logits.shape[0]))
         
-        return jnp.concatenate([scores_lis[0], scores]), jnp.concatenate([tags_lis[0], max_tags], axis=0)
+        return jnp.concatenate([jnp.expand_dims(scores_lis[0],axis=0), scores]), jnp.concatenate([jnp.expand_dims(tags_lis[0], axis=0), max_tags])
         
         """ FOR-LOOP equivalent
         for i in range(1, logits.shape[0]):
@@ -243,7 +243,7 @@ class crf_layer(hk.Module):
         scores, tags = batch_decode_fn(batch_logits)
 
         tag_sequences = [jnp.array([-1] * scores.shape[0])]
-        batch_scores = jnp.array([-1] * scores.shape[0])
+        batch_scores = jnp.array([-1.] * scores.shape[0])
         
         def scan_fn(carry, x):
             i=x

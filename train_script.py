@@ -65,10 +65,11 @@ class TrainState(train_state.TrainState):
 
 def train_step(state, batch, key):
 
-    attention_mask = batch.input_ids != state.config["pad_for"]['input_ids']
-    lengths = jnp.sum(attention_mask, axis=-1)
-
-    def comp_prediction_loss(params, key):
+    @jax.pmap
+    def _comp_prediction_loss(params, state, batch, key):
+        attention_mask = batch.input_ids != state.config["pad_for"]['input_ids']
+        lengths = jnp.sum(attention_mask, axis=-1)
+        
         key, subkey = jax.random.split(key)
         logits = state.apply_fn(
             batch.input_ids,
@@ -77,16 +78,26 @@ def train_step(state, batch, key):
             dropout_rng=subkey,
             train=True,
         )['last_hidden_state']
-        return state.comp_prediction_loss(params["comp_predictor"], key,
+        
+        key, subkey = jax.random.split(key)
+        loss = state.comp_prediction_loss(params["comp_predictor"], subkey,
                                           logits, lengths, batch.post_tags)
+        return loss, key
+    
+    def comp_prediction_loss(params, state, batch, key):
+        loss, key = _comp_prediction_loss(params, state, batch, key)
+        return jnp.mean(loss), key
 
-    grad_fn = jax.value_and_grad(comp_prediction_loss)
-    key, subkey = jax.random.split(key)
-    _comp_prediction_loss, grad = grad_fn(state.params, subkey)
-    grad = jax.lax.pmean(grad, axis_name="device_axis")
-    new_state = state.apply_gradients(grads=grad)
+    grad_fn = jax.value_and_grad(comp_prediction_loss, has_aux=True)
+    (cpl, key), grad = grad_fn(state.params, state, batch, key)
+    grad = jnp.mean(grad, axis=0)
+    state = state.apply_gradients(grads=flax.jax_utils.replicate(grad))
+    del grad
 
-    def relation_prediction_loss(params, key):
+    @jax.pmap
+    def _relation_prediction_loss(params, state, batch, key):
+        attention_mask = batch.input_ids != state.config["pad_for"]['input_ids']
+        
         key, subkey = jax.random.split(key)
         embds = state.apply_fn(
             batch.input_ids,
@@ -96,32 +107,33 @@ def train_step(state, batch, key):
             dropout_rng=subkey,
             train=True,
         )['last_hidden_state']
-        return state.relation_prediction_loss(
-            params["relation_predictor"],
-            key,
-            embds,
-            batch.post_tags == state.config["post_tags"]["B"],
-            batch.relations,
-        )
-
-    grad_fn = jax.value_and_grad(relation_prediction_loss)
-    key, subkey = jax.random.split(key)
-    _relation_prediction_loss, grad = grad_fn(new_state.params, subkey)
-    grad = jax.lax.pmean(grad, axis_name="device_axis")
-    new_new_state = new_state.apply_gradients(grads=grad)
+        
+        key, subkey = jax.random.split(key)
+        loss =  state.relation_prediction_loss(params["relation_predictor"], subkey, embds,
+                                               batch.post_tags == state.config["post_tags"]["B"],
+                                               batch.relations,)
+        
+        return loss, key
+    
+    def relation_prediction_loss(params, state, batch, key):
+        loss, key = _relation_prediction_loss(params, state, batch, key)
+        return jnp.mean(loss), key
+    
+    grad_fn = jax.value_and_grad(relation_prediction_loss, has_aux=True)
+    (rpl, key), grad = grad_fn(state.params, key)
+    grad = jnp.mean(grad, axis=0)
+    state = state.apply_gradients(grads=flax.jax_utils.replicate(grad))
 
     losses = {
-        "comp_pred_loss":
-        jax.lax.pmean(_comp_prediction_loss, axis_name="device_axis"),
-        "rel_pred_loss":
-        jax.lax.pmean(_relation_prediction_loss, axis_name="device_axis"),
+        "comp_pred_loss": cpl,
+        "rel_pred_loss": rpl,
     }
 
-    return new_new_state, losses, key
+    return state, losses, key
 
 
 @jax.pmap
-def get_preds(state, batch, key):
+def get_comp_preds(state, batch, key):
 
     attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
     lengths = jnp.sum(attention_mask, axis=-1)
@@ -137,6 +149,14 @@ def get_preds(state, batch, key):
     comp_preds = state.comp_predictor(params["comp_predictor"], key, logits,
                                       lengths)
 
+    return comp_preds
+
+@jax.pmap
+def get_rel_preds(state, batch, key):
+    
+    attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
+    lengths = jnp.sum(attention_mask, axis=-1)
+
     embds = state.apply_fn(
         batch.input_ids,
         attention_mask,
@@ -145,15 +165,17 @@ def get_preds(state, batch, key):
         dropout_rng=key,
         train=False,
     )['last_hidden_state']
-
+    
     rel_preds = state.relation_predictor(
         params["relation_predictor"],
         key,
         embds,
         batch.post_tags == state.config["post_tags"]["B"],
     )
+    return rel_preds
 
-    return comp_preds, rel_preds
+def get_preds(state, batch, key):
+    return get_rel_preds(state, batch, key), get_comp_preds(state, batch, key)
 
 
 comp_prediction_metric = load_metric("seqeval")
@@ -227,7 +249,7 @@ if __name__ == "__main__":
 
     key = jax.random.split(key, stable_config["num_devices"])
 
-    parallel_train_step = jax.pmap(train_step, axis_name="device_axis")
+    #parallel_train_step = jax.pmap(train_step, axis_name="device_axis")
 
     train_dataset = get_tfds_dataset(config["train_files"], config)
     val_dataset = get_tfds_dataset(config["valid_files"], config)
@@ -245,8 +267,7 @@ if __name__ == "__main__":
 
     for epoch in range(config["n_epochs"]):
         for batch in train_dataset:
-            loop_state, step_losses, key = parallel_train_step(
-                loop_state, batch, key)
+            loop_state, step_losses, key = train_step(loop_state, batch, key)
             losses = jax.tree_multimap(lambda x, y: x + y, losses, step_losses)
             num_iters += 1
 
@@ -272,8 +293,7 @@ if __name__ == "__main__":
 
             if num_iters % validation_n_iters == 0:
                 for batch in val_dataset:
-                    key, subkey = jax.random.split(key)
-                    eval_step(loop_state, batch, subkey)
+                    eval_step(loop_state, batch, key)
                 print(
                     "Component Prediction metrics for iterations",
                     num_iters,
