@@ -125,8 +125,8 @@ def train_step(state, batch, key):
     state = state.apply_gradients(grads=flax.jax_utils.replicate(grad))
 
     losses = {
-        "comp_pred_loss": cpl,
-        "rel_pred_loss": rpl,
+        "comp_pred_loss": jnp.mean(cpl),
+        "rel_pred_loss": jnp.mean(rpl),
     }
 
     return state, losses, key
