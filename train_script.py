@@ -155,7 +155,6 @@ def get_comp_preds(state, batch, key):
 def get_rel_preds(state, batch, key):
     
     attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
-    lengths = jnp.sum(attention_mask, axis=-1)
 
     embds = state.apply_fn(
         batch.input_ids,

@@ -147,8 +147,6 @@ class crf_layer(hk.Module):
                                              init=prev_alphas,
                                              xs=jnp.arange(1, logits.shape[0]))
         
-        return jnp.concatenate([jnp.expand_dims(scores_lis[0],axis=0), scores]), jnp.concatenate([jnp.expand_dims(tags_lis[0], axis=0), max_tags])
-        
         """ FOR-LOOP equivalent
         for i in range(1, logits.shape[0]):
             max_tags = self.core_recursion(jnp.argmax, transition_matrix,
@@ -160,6 +158,7 @@ class crf_layer(hk.Module):
 
         return jnp.stack(scores_lis), jnp.stack(tags_lis)
         """
+        return jnp.concatenate([jnp.expand_dims(scores_lis[0],axis=0), scores]), jnp.concatenate([jnp.expand_dims(tags_lis[0], axis=0), max_tags])
 
     def batched_sum_scores(self, batch_logits: jnp.ndarray,
                            lengths: jnp.ndarray) -> jnp.ndarray:
@@ -264,7 +263,6 @@ class crf_layer(hk.Module):
                                                    init=(tag_sequences[-1], batch_scores),
                                                    xs=jnp.arange(scores.shape[1], -1, -1))
 
-        return jnp.flip(tag_sequences, axis=0), batch_scores
         """FOR-LOOP equivalent
         for i in range(scores.shape[1] - 1, -1, -1):
 
@@ -281,6 +279,8 @@ class crf_layer(hk.Module):
         tag_sequences.reverse()
         return jnp.stack(tag_sequences[:-1], axis=1), batch_scores
         """
+        return jnp.flip(tag_sequences, axis=0), batch_scores
+    
     def weighted_ce(self, batch_logits: jnp.ndarray, lengths: jnp.ndarray,
                     batch_tags: jnp.ndarray) -> jnp.ndarray:
         """Computes weighted cross-entropy loss for the given logits and tags
