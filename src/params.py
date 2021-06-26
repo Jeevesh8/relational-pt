@@ -22,7 +22,8 @@ config = {
     5,
     "train_files": ["./train.txt"],
     "valid_files": ["./valid.txt"],
-    "save_model_file": "../relational_pretrained.wts",
+    "save_model_file":
+    "../relational_pretrained.wts",
 }
 
 n_samples = 0

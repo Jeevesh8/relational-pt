@@ -333,7 +333,9 @@ if __name__ == "__main__":
                     ":",
                     rel_prediction_metric.compute(),
                 )
-    
+
     with open(config["save_model_file"], "wb+") as f:
-        f.write(serialization.to_bytes(jnp.take(loop_state.params, [0], axis=0)))
-        print("COMPLETER TRAINING. WEIGHTS STORED AT:", config["save_model_file"])
+        f.write(
+            serialization.to_bytes(jnp.take(loop_state.params, [0], axis=0)))
+        print("COMPLETER TRAINING. WEIGHTS STORED AT:",
+              config["save_model_file"])
