@@ -4,7 +4,6 @@ from typing import Callable
 from src.models.utils import get_tokenizer
 
 import jax
-import optax
 import flax
 import haiku as hk
 from flax.training import train_state
