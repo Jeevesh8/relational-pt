@@ -18,6 +18,7 @@ from src.globals import stable_config
 from src.params import config
 from src.models import crf_layer, tree_crf, relational_model
 from src.training.utils import load_relational_metric, batch_to_post_tags
+from src.training.optimizer import get_adam_opt
 from src.dataloaders.text_file_loader import get_tfds_dataset
 
 import jax.tools.colab_tpu
@@ -255,7 +256,7 @@ if __name__ == "__main__":
 
     params["embds_params"] = transformer_model.params
 
-    opt = optax.chain(optax.adam(learning_rate=config["lr"]))
+    opt = get_adam_opt()
 
     init_train_state = TrainState.create(
         apply_fn=transformer_model.__call__,
