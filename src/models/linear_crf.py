@@ -142,11 +142,10 @@ class crf_layer(hk.Module):
             prev_alphas = self.core_recursion(jnp.max, transition_matrix,
                                               prev_alphas, logits[i])
             return prev_alphas, (max_tags, prev_alphas)
-        
+
         _, (max_tags, scores) = jax.lax.scan(scan_fn,
                                              init=prev_alphas,
                                              xs=jnp.arange(1, logits.shape[0]))
-        
         """ FOR-LOOP equivalent
         for i in range(1, logits.shape[0]):
             max_tags = self.core_recursion(jnp.argmax, transition_matrix,
@@ -158,7 +157,9 @@ class crf_layer(hk.Module):
 
         return jnp.stack(scores_lis), jnp.stack(tags_lis)
         """
-        return jnp.concatenate([jnp.expand_dims(scores_lis[0],axis=0), scores]), jnp.concatenate([jnp.expand_dims(tags_lis[0], axis=0), max_tags])
+        return jnp.concatenate([
+            jnp.expand_dims(scores_lis[0], axis=0), scores
+        ]), jnp.concatenate([jnp.expand_dims(tags_lis[0], axis=0), max_tags])
 
     def batched_sum_scores(self, batch_logits: jnp.ndarray,
                            lengths: jnp.ndarray) -> jnp.ndarray:
@@ -242,27 +243,28 @@ class crf_layer(hk.Module):
         scores, tags = batch_decode_fn(batch_logits)
 
         tag_sequences = [jnp.array([-1] * scores.shape[0])]
-        batch_scores = jnp.array([-1.] * scores.shape[0])
-        
+        batch_scores = jnp.array([-1.0] * scores.shape[0])
+
         def scan_fn(carry, x):
-            i=x
+            i = x
             prev_tag_sequence, batch_scores = carry
             last_tag = jnp.where(i + 1 == lengths,
                                  jnp.argmax(scores[:, i, :], axis=1), -1)
             next_tag_sequence = jnp.diag(
-                                         jnp.where(i + 1 < lengths,
-                                                 tags[:, i + 1, prev_tag_sequence], last_tag))
-            
+                jnp.where(i + 1 < lengths, tags[:, i + 1, prev_tag_sequence],
+                          last_tag))
+
             batch_scores = jnp.where(i + 1 == lengths,
                                      jnp.max(scores[:, i, :], axis=1),
                                      batch_scores)
-            
-            return (next_tag_sequence, batch_scores), next_tag_sequence
-        
-        batch_scores, tag_sequences = jax.lax.scan(scan_fn,
-                                                   init=(tag_sequences[-1], batch_scores),
-                                                   xs=jnp.arange(scores.shape[1], -1, -1))
 
+            return (next_tag_sequence, batch_scores), next_tag_sequence
+
+        batch_scores, tag_sequences = jax.lax.scan(
+            scan_fn,
+            init=(tag_sequences[-1], batch_scores),
+            xs=jnp.arange(scores.shape[1], -1, -1),
+        )
         """FOR-LOOP equivalent
         for i in range(scores.shape[1] - 1, -1, -1):
 
@@ -280,7 +282,7 @@ class crf_layer(hk.Module):
         return jnp.stack(tag_sequences[:-1], axis=1), batch_scores
         """
         return jnp.flip(tag_sequences, axis=0), batch_scores
-    
+
     def weighted_ce(self, batch_logits: jnp.ndarray, lengths: jnp.ndarray,
                     batch_tags: jnp.ndarray) -> jnp.ndarray:
         """Computes weighted cross-entropy loss for the given logits and tags
