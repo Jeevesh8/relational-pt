@@ -211,7 +211,9 @@ if __name__ == "__main__":
 
     key = PRNGKey(42)
 
-    transformer_model = FlaxBigBirdModel.from_pretrained(stable_config["checkpoint"], num_hidden_layers=11)
+    transformer_model = FlaxBigBirdModel.from_pretrained(
+        stable_config["checkpoint"], num_hidden_layers=11
+    )
     tokenizer = get_tokenizer()
 
     pure_cpl = hk.transform(comp_prediction_loss)
