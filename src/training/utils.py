@@ -19,11 +19,11 @@ def relational_metric(prediction: List[List[int]],
     """
     set_prediction = set()
     for elem in prediction:
-        set_prediction = set_prediction.add(elem)
+        set_prediction.add(tuple(elem))
 
     set_reference = set()
     for elem in reference:
-        set_reference = set_reference.add(elem)
+        set_reference.add(tuple(elem))
 
     return len(set_prediction.intersection(set_reference)), len(
         set_prediction.union(set_reference))
@@ -51,6 +51,9 @@ def batch_to_relational_lists(predictions: jnp.ndarray,
         batchwise_num_ref_rels.tolist(),
     )
 
+def calc_relation_metric(x, y, x_idx, y_idx): 
+    return relational_metric(x[:x_idx], y[:y_idx])
+
 
 class relation_match_metric:
     def __init__(self, n_processes=None):
@@ -58,7 +61,7 @@ class relation_match_metric:
         self.common_relations = 0
         self.total_relations = 0
         if n_processes is None:
-            self.n_processes = config["batch_size"] // 2
+            self.n_processes = max(1, config["batch_size"] // 2)
 
     def add_batch(self, predictions, references):
         """Computes the relation match metric for the given batch of data.
@@ -76,8 +79,7 @@ class relation_match_metric:
 
         with Pool(self.n_processes) as p:
             samplewise_metrics = p.starmap(
-                lambda x, y, x_idx, y_idx: relational_metric(
-                    x[:x_idx], y[:y_idx]),
+                calc_relation_metric,
                 zip(preds_list, refs_list, preds_idx_list, refs_idx_list),
             )
 
@@ -114,10 +116,10 @@ def load_relational_metric(n_processes=None):
     return relation_match_metric(n_processes)
 
 def convert_ids_to_tags(lis, idx):
-        return [
+    return [
             "B-P" if config["post_tags"]["B"] == lis[i] else "I-P"
             for i in range(0, idx)
-        ]
+           ]
 
 def batch_to_post_tags(
         references: jnp.ndarray,
@@ -134,8 +136,9 @@ def batch_to_post_tags(
         Lists of references and predictions converted to string tags for each sample sequence in the batch.
     """
 
-    seq_lens = jnp.reshape(jnp.sum(references != config["pad_for"]["post_tags"], axis=-1), (-1)).tolist()
-
+    seq_lens = jnp.reshape(jnp.sum(references != config["pad_for"]["post_tags"],
+                       axis=-1), (-1)).tolist()
+  
     with Pool(sum(seq_lens) // 10000 + 1) as p:
         predictions_lis = p.starmap(convert_ids_to_tags,
                                     zip(predictions.tolist(), seq_lens))
