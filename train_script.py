@@ -23,9 +23,9 @@ from src.training.utils import load_relational_metric, batch_to_post_tags
 from src.training.optimizer import get_adam_opt
 from src.dataloaders.text_file_loader import get_tfds_dataset
 
-#import jax.tools.colab_tpu
+# import jax.tools.colab_tpu
 
-#jax.tools.colab_tpu.setup_tpu()
+# jax.tools.colab_tpu.setup_tpu()
 
 print("Devices detected: ", jax.local_devices())
 
@@ -34,11 +34,8 @@ def comp_prediction_loss(logits, lengths, label_tags):
     return crf_layer(n_classes=2)(hk.Linear(2)(logits), lengths, label_tags)
 
 
-def relation_prediction_loss(embds, choice_mask, label_relations, max_comps,
-                             embed_dim):
-    model1 = relational_model(n_rels=1,
-                              max_comps=max_comps,
-                              embed_dim=embed_dim)
+def relation_prediction_loss(embds, choice_mask, label_relations, max_comps, embed_dim):
+    model1 = relational_model(n_rels=1, max_comps=max_comps, embed_dim=embed_dim)
     log_energies = model1(embds, choice_mask)
     return tree_crf().disc_loss(log_energies, label_relations)
 
@@ -51,14 +48,11 @@ relation_prediction_loss = partial(
 
 
 def predict_components(logits, lengths):
-    return crf_layer(n_classes=2).batch_viterbi_decode(
-        hk.Linear(2)(logits), lengths)[0]
+    return crf_layer(n_classes=2).batch_viterbi_decode(hk.Linear(2)(logits), lengths)[0]
 
 
 def predict_relations(embds, choice_mask, max_comps, embed_dim):
-    model1 = relational_model(n_rels=1,
-                              max_comps=max_comps,
-                              embed_dim=embed_dim)
+    model1 = relational_model(n_rels=1, max_comps=max_comps, embed_dim=embed_dim)
     log_energies = model1(embds, choice_mask)
     return tree_crf().mst(log_energies)[1]
 
@@ -94,8 +88,9 @@ def ctrain_step(state, batch, key):
         )["last_hidden_state"]
 
         key, subkey = jax.random.split(key)
-        loss = state.comp_prediction_loss(params["comp_predictor"], subkey,
-                                          logits, lengths, batch.post_tags)
+        loss = state.comp_prediction_loss(
+            params["comp_predictor"], subkey, logits, lengths, batch.post_tags
+        )
         return loss, key
 
     def comp_prediction_loss(params, state, batch, key):
@@ -111,8 +106,8 @@ def ctrain_step(state, batch, key):
     state = flax.jax_utils.replicate(state)
     return state, cpl, key
 
-def rtrain_step(state, batch, key): 
 
+def rtrain_step(state, batch, key):
     @jax.pmap
     def _relation_prediction_loss(params, state, batch, key):
         attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
@@ -144,12 +139,12 @@ def rtrain_step(state, batch, key):
 
     grad_fn = jax.value_and_grad(relation_prediction_loss, has_aux=True)
     (rpl, key), grad = grad_fn(state.params, state, batch, key)
-    grad = tree_map(lambda x:jnp.mean(x, axis=0), grad)
+    grad = tree_map(lambda x: jnp.mean(x, axis=0), grad)
 
     state = flax.jax_utils.unreplicate(state)
     state = state.apply_gradients(grads=grad)
     state = flax.jax_utils.replicate(state)
-    
+
     return state, rpl, key
 
 
@@ -167,8 +162,7 @@ def get_comp_preds(state, batch, key):
         train=False,
     )["last_hidden_state"]
 
-    comp_preds = state.comp_predictor(params["comp_predictor"], key, logits,
-                                      lengths)
+    comp_preds = state.comp_predictor(params["comp_predictor"], key, logits, lengths)
 
     return comp_preds
 
@@ -217,8 +211,7 @@ if __name__ == "__main__":
 
     key = PRNGKey(42)
 
-    transformer_model = FlaxBigBirdModel.from_pretrained(
-        stable_config["checkpoint"])
+    transformer_model = FlaxBigBirdModel.from_pretrained(stable_config["checkpoint"])
     tokenizer = get_tokenizer()
 
     pure_cpl = hk.transform(comp_prediction_loss)
@@ -230,15 +223,15 @@ if __name__ == "__main__":
     params = {}
 
     sample_logits = jnp.zeros(
-        (config["batch_size"], stable_config["max_len"],
-         stable_config["embed_dim"]),
+        (config["batch_size"], stable_config["max_len"], stable_config["embed_dim"]),
         dtype=jnp.float32,
     )
-    sample_lengths = jnp.full((config["batch_size"]),
-                              stable_config["max_len"],
-                              dtype=jnp.int32)
+    sample_lengths = jnp.full(
+        (config["batch_size"]), stable_config["max_len"], dtype=jnp.int32
+    )
     sample_comp_labels = jax.random.randint(
-        key, (config["batch_size"], stable_config["max_len"]), 0, 2)
+        key, (config["batch_size"], stable_config["max_len"]), 0, 2
+    )
 
     sample_relations = jax.random.randint(
         key,
@@ -246,25 +239,24 @@ if __name__ == "__main__":
         0,
         stable_config["max_comps"],
     )
-    sample_relations = jnp.where(jnp.array([True, True, False]),
-                                 sample_relations, 0)
+    sample_relations = jnp.where(jnp.array([True, True, False]), sample_relations, 0)
 
     key, subkey = jax.random.split(key)
-    params["comp_predictor"] = pure_cpl.init(subkey, sample_logits,
-                                             sample_lengths,
-                                             sample_comp_labels)
+    params["comp_predictor"] = pure_cpl.init(
+        subkey, sample_logits, sample_lengths, sample_comp_labels
+    )
 
     key, subkey = jax.random.split(key)
-    params["relation_predictor"] = pure_rpl.init(subkey, sample_logits,
-                                                 sample_comp_labels == 0,
-                                                 sample_relations)
+    params["relation_predictor"] = pure_rpl.init(
+        subkey, sample_logits, sample_comp_labels == 0, sample_relations
+    )
 
     del sample_logits, sample_lengths, sample_comp_labels, sample_relations
-    
+
     params["embds_params"] = transformer_model.params
 
     params = tree_map(lambda x: x.astype(jnp.bfloat16), params)
-    
+
     opt = get_adam_opt()
 
     init_train_state = TrainState.create(
@@ -277,7 +269,7 @@ if __name__ == "__main__":
         relation_predictor=pure_pr.apply,
         config=config,
     )
-     
+
     key = jax.random.split(key, stable_config["num_devices"])
 
     # parallel_train_step = jax.pmap(train_step, axis_name="device_axis")
@@ -289,10 +281,7 @@ if __name__ == "__main__":
     loop_state = flax.jax_utils.replicate(init_train_state)
     del init_train_state
 
-    losses = {
-        "comp_pred_loss": jnp.array([0.0]),
-        "rel_pred_loss": jnp.array([0.0])
-    }
+    losses = {"comp_pred_loss": jnp.array([0.0]), "rel_pred_loss": jnp.array([0.0])}
 
     log_loss_n_iters = 1000
     validation_n_iters = 10000
@@ -302,9 +291,9 @@ if __name__ == "__main__":
             loop_state, cpl, key = ctrain_step(loop_state, batch, key)
             loop_state, rpl, key = rtrain_step(loop_state, batch, key)
             step_losses = {
-                     "comp_pred_loss": cpl,
-                     "rel_pred_loss": rpl,
-                    }
+                "comp_pred_loss": cpl,
+                "rel_pred_loss": rpl,
+            }
 
             losses = jax.tree_multimap(lambda x, y: x + y, losses, step_losses)
             num_iters += 1
@@ -350,7 +339,5 @@ if __name__ == "__main__":
                 )
 
     with open(config["save_model_file"], "wb+") as f:
-        f.write(
-            serialization.to_bytes(jnp.take(loop_state.params, [0], axis=0)))
-        print("COMPLETER TRAINING. WEIGHTS STORED AT:",
-              config["save_model_file"])
+        f.write(serialization.to_bytes(jnp.take(loop_state.params, [0], axis=0)))
+        print("COMPLETER TRAINING. WEIGHTS STORED AT:", config["save_model_file"])
