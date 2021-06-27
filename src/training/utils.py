@@ -121,7 +121,6 @@ def convert_ids_to_tags(lis, idx):
             for i in range(0, idx)
            ]
 
-
 def batch_to_post_tags(
         references: jnp.ndarray,
         predictions: jnp.ndarray) -> Tuple[List[List[str]], List[List[str]]]:
@@ -139,9 +138,7 @@ def batch_to_post_tags(
 
     seq_lens = jnp.reshape(jnp.sum(references != config["pad_for"]["post_tags"],
                        axis=-1), (-1)).tolist()
-    print("Seq lens:", seq_lens)
-    print("predictions shape:", predictions.shape)
-    print("references shape:", references.shape)
+  
     with Pool(sum(seq_lens) // 10000 + 1) as p:
         predictions_lis = p.starmap(convert_ids_to_tags,
                                     zip(predictions.tolist(), seq_lens))

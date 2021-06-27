@@ -8,6 +8,7 @@ config = {
         "user_tags": 500,
         "relations": 0,
     },
+  
     "batch_size":
     1,
     "post_tags": {
@@ -34,16 +35,12 @@ for filename in config["train_files"]:
                 n_samples += 1
 
 config["opt"] = {
-    "lr":
-    0.0001,
-    "max_grad_norm":
-    1.0,  # Gradients clipped at this norm. Use "None" for no clipping
-    "total_steps":
-    2 * n_samples // (config["batch_size"] * stable_config["num_devices"]),
-    "restart_from":
-    0,
-    "use_schedule":
-    True,
-    "weight_decay":
-    None,  # Use "None" for no weight decay, adamw will be used in this case.
+    "lr": 0.0001,
+    "max_grad_norm": 1.0,  # Gradients clipped at this norm. Use "None" for no clipping
+    "total_steps": 2
+    * n_samples
+    // (config["batch_size"] * stable_config["num_devices"]),
+    "restart_from": 0,
+    "use_schedule": True,
+    "weight_decay": None,  # Use "None" for no weight decay, adamw will be used in this case.
 }

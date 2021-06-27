@@ -34,29 +34,33 @@ def get_all_trees(read_file):
         re.findall(comment_pattern, post_tree) for post_tree in post_trees
     ]
 
-    tree_with_post_parent_user_no = [[{
-        "post_id":
-        int(elem[0]),
-        "parent_id":
-        None if elem[1] == "None" else int(elem[1]),
-        "user_no":
-        int(elem[2]),
-        "body": (" " if i != 0 else "") + elem[3].strip(),
-    } for i, elem in enumerate(tree)]
-                                     for tree in tree_with_post_parent_user_no]
+    tree_with_post_parent_user_no = [
+        [
+            {
+                "post_id": int(elem[0]),
+                "parent_id": None if elem[1] == "None" else int(elem[1]),
+                "user_no": int(elem[2]),
+                "body": (" " if i != 0 else "") + elem[3].strip(),
+            }
+            for i, elem in enumerate(tree)
+        ]
+        for tree in tree_with_post_parent_user_no
+    ]
     return tree_with_post_parent_user_no
 
 
 def format_data(tree_with_post_parent_user_no):
     with Pool(5) as p:
-        tree_with_post_parent_user_no = p.map(remove_artifacts,
-                                              tree_with_post_parent_user_no)
-        tree_with_post_parent_user_no = p.map(only_inside_links,
-                                              tree_with_post_parent_user_no)
-        tree_with_post_parent_user_no = p.map(tree_ids_to_nos,
-                                              tree_with_post_parent_user_no)
-        inputs_tags_n_rels = p.map(dict_to_inputs,
-                                   tree_with_post_parent_user_no)
+        tree_with_post_parent_user_no = p.map(
+            remove_artifacts, tree_with_post_parent_user_no
+        )
+        tree_with_post_parent_user_no = p.map(
+            only_inside_links, tree_with_post_parent_user_no
+        )
+        tree_with_post_parent_user_no = p.map(
+            tree_ids_to_nos, tree_with_post_parent_user_no
+        )
+        inputs_tags_n_rels = p.map(dict_to_inputs, tree_with_post_parent_user_no)
     return inputs_tags_n_rels
 
 
@@ -79,8 +83,7 @@ def get_tfds_dataset(file_lis, config):
             tf.TensorSpec(shape=(None), dtype=tf.int32, name="input_ids"),
             tf.TensorSpec(shape=(None), dtype=tf.int32, name="post_tags"),
             tf.TensorSpec(shape=(None), dtype=tf.int32, name="user_tags"),
-            tf.TensorSpec(shape=(None, None), dtype=tf.int32,
-                          name="relations"),
+            tf.TensorSpec(shape=(None, None), dtype=tf.int32, name="relations"),
         ),
     )
 
