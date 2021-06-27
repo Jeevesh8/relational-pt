@@ -20,8 +20,8 @@ config = {
     } for i in range(1, stable_config["max_users"] * 2, 2)],
     "n_epochs":
     5,
-    "train_files": ["../subtrees-text-4096-64-comps/train.txt"],
-    "valid_files": ["../subtrees-text-4096-64-comps/valid.txt"],
+    "train_files": ["../subtrees-text-4096/train.txt"],
+    "valid_files": ["../subtrees-text-4096/valid.txt"],
     "save_model_file":
     "../relational_pretrained.wts",
 }

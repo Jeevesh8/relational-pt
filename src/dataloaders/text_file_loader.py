@@ -25,7 +25,7 @@ def get_all_trees(read_file):
         post_trees = [
             elem.strip() for elem in f.readlines()
             if not elem.startswith("-" * 14)
-            ][:100]
+            ]
 
     comment_pattern = (
         r"<post(\d+) parent_id= (.*?)> <user(\d+)>(.+?)<\/user\d+> <\/post\d+>"
@@ -98,6 +98,6 @@ def get_tfds_dataset(file_lis, config):
             config["pad_for"]["user_tags"],
             config["pad_for"]["relations"],
         ),
-    ).batch(stable_config["num_devices"]).map(convert_to_named_tuple))
+    ).batch(stable_config["num_devices"], drop_remainder=True).map(convert_to_named_tuple))
 
     return dataset.as_numpy_iterator()

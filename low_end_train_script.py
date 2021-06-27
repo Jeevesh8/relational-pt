@@ -8,7 +8,6 @@ from src.models.utils import get_tokenizer
 import jax
 import flax
 import haiku as hk
-from haiku.data_structures import to_mutable_dict
 from flax.training import train_state
 
 import jax.numpy as jnp
@@ -78,13 +77,13 @@ class TrainState(train_state.TrainState):
     relation_predictor: Callable = flax.struct.field(pytree_node=False)
     config: dict = flax.struct.field(pytree_node=False)
 
-@partial(jax.pmap, axis_name="device_axis", donate_argnums=(0,1,2))
-def train_step(state, batch, key):
 
-    attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
-    lengths = jnp.sum(attention_mask, axis=-1)
+def ctrain_step(state, batch, key):
+    @jax.pmap
+    def _comp_prediction_loss(params, state, batch, key):
+        attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
+        lengths = jnp.sum(attention_mask, axis=-1)
 
-    def comp_prediction_loss(params, key):
         key, subkey = jax.random.split(key)
         logits = state.apply_fn(
             batch.input_ids,
@@ -93,16 +92,33 @@ def train_step(state, batch, key):
             dropout_rng=subkey,
             train=True,
         )["last_hidden_state"]
-        return state.comp_prediction_loss(params["comp_predictor"], key,
+
+        key, subkey = jax.random.split(key)
+        loss = state.comp_prediction_loss(params["comp_predictor"], subkey,
                                           logits, lengths, batch.post_tags)
+        return loss, key
 
-    grad_fn = jax.value_and_grad(comp_prediction_loss)
-    key, subkey = jax.random.split(key)
-    _comp_prediction_loss, grad = grad_fn(state.params, subkey)
-    grad = jax.lax.pmean(grad, axis_name="device_axis")
-    new_state = state.apply_gradients(grads=grad)
+    def comp_prediction_loss(params, state, batch, key):
+        loss, key = _comp_prediction_loss(params, state, batch, key)
+        return jnp.mean(loss), key
 
-    def relation_prediction_loss(params, key):
+    grad_fn = jax.value_and_grad(comp_prediction_loss, has_aux=True)
+    (cpl, key), grad = grad_fn(state.params, state, batch, key)
+    grad = tree_map(lambda x: jnp.mean(x, axis=0), grad)
+
+    #state = flax.jax_utils.unreplicate(state)
+    #grad = flax.jax_utils.replicate(grad)
+    #state = jax.pmap(state.apply_gradients)(grads=grad)
+    #state = flax.jax_utils.replicate(state)
+    state = jax.pmap(lambda state, grad: state.apply_gradients(grads=grad), in_axes=(0,None))(state, grad)
+    return state, cpl, key
+
+def rtrain_step(state, batch, key): 
+
+    @jax.pmap
+    def _relation_prediction_loss(params, state, batch, key):
+        attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
+
         key, subkey = jax.random.split(key)
         embds = state.apply_fn(
             batch.input_ids,
@@ -112,26 +128,33 @@ def train_step(state, batch, key):
             dropout_rng=subkey,
             train=True,
         )["last_hidden_state"]
-        return state.relation_prediction_loss(
+
+        key, subkey = jax.random.split(key)
+        loss = state.relation_prediction_loss(
             params["relation_predictor"],
-            key,
+            subkey,
             embds,
-            batch.post_tags == config["post_tags"]["B"],
+            batch.post_tags == state.config["post_tags"]["B"],
             batch.relations,
         )
 
-    grad_fn = jax.value_and_grad(relation_prediction_loss)
-    key, subkey = jax.random.split(key)
-    _relation_prediction_loss, grad = grad_fn(new_state.params, subkey)
-    grad = jax.lax.pmean(grad, axis_name="device_axis")
-    new_new_state = new_state.apply_gradients(grads=grad)
+        return loss, key
 
-    losses = {
-        "comp_pred_loss": _comp_prediction_loss,
-        "rel_pred_loss": _relation_prediction_loss,
-    }
+    def relation_prediction_loss(params, state, batch, key):
+        loss, key = _relation_prediction_loss(params, state, batch, key)
+        return jnp.mean(loss), key
 
-    return new_new_state, losses, key
+    grad_fn = jax.value_and_grad(relation_prediction_loss, has_aux=True)
+    (rpl, key), grad = grad_fn(state.params, state, batch, key)
+    grad = tree_map(lambda x:jnp.mean(x, axis=0), grad)
+
+    #state = flax.jax_utils.unreplicate(state)
+#    grad = flax.jax_utils.replicate(grad)
+#    state = jax.pmap(state.apply_gradients)(grads=grad)
+    #state = flax.jax_utils.replicate(state)
+    state = jax.pmap(lambda state, grad: state.apply_gradients(grads=grad), in_axes=(0,None))(state, grad)  
+    return state, rpl, key
+
 
 @jax.pmap
 def get_comp_preds(state, batch, key):
@@ -206,7 +229,7 @@ if __name__ == "__main__":
     key = PRNGKey(42)
 
     transformer_model = FlaxBigBirdModel.from_pretrained(
-        stable_config["checkpoint"], num_hidden_layers=12)
+        stable_config["checkpoint"], num_hidden_layers=11)
     tokenizer = get_tokenizer()
 
     pure_cpl = hk.transform(comp_prediction_loss)
@@ -251,7 +274,7 @@ if __name__ == "__main__":
     
     params["embds_params"] = transformer_model.params
 
-    #params = tree_map(lambda x: x.astype(jnp.bfloat16), params)
+#    params = tree_map(lambda x: x.astype(jnp.bfloat16), params)
     
     opt = get_adam_opt()
 
@@ -288,8 +311,13 @@ if __name__ == "__main__":
     for epoch in range(config["n_epochs"]):
         for batch in train_dataset:
 #            """
-            loop_state, step_losses, key = train_step(loop_state, batch, key)
-            step_losses = jax.tree_util.tree_map(lambda x: jnp.mean(x, axis=0), step_losses)
+            loop_state, cpl, key = ctrain_step(loop_state, batch, key)
+            print("Completed cpl: ", cpl)
+            loop_state, rpl, key = rtrain_step(loop_state, batch, key)
+            step_losses = {
+                     "comp_pred_loss": cpl,
+                     "rel_pred_loss": rpl,
+                    }
             print(step_losses)
             losses = jax.tree_multimap(lambda x, y: x + y, losses, step_losses)
             num_iters += 1
@@ -335,12 +363,7 @@ if __name__ == "__main__":
                 )
 
     with open(config["save_model_file"], "wb+") as f:
-        to_write = {"embds_params" : loop_state.params["embds_params"],
-                    "comp_predictor": to_mutable_dict(loop_state.params["comp_predictor"]),
-                    "relation_predictor": to_mutable_dict(loop_state.params["relation_predictor"]),
-                    }
-                    
         f.write(
-                serialization.to_bytes(jax.tree_util.tree_map(lambda x: jnp.take(x, [0], axis=0), to_write)))
+                serialization.to_bytes(jax.tree_util.tree_map(lambda x: jnp.take(x,[0],axis=0), loop_state.params))
         print("COMPLETER TRAINING. WEIGHTS STORED AT:",
               config["save_model_file"])

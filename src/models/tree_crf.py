@@ -151,7 +151,7 @@ class tree_crf(hk.Module):
                 (jnp.expand_dims(temp_idx, axis=-1), jnp.arange(M)), temp)
             partitions = remove_garbage_dims(partitions)
 
-        return mst_energy, jnp.concatenate(edges)
+        return mst_energy, jnp.stack(edges)
        # """
 
     def mst(self,

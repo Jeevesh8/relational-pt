@@ -253,18 +253,19 @@ class crf_layer(hk.Module):
             next_tag_sequence = jnp.diag(
                 jnp.where(i + 1 < lengths, tags[:, i + 1, prev_tag_sequence],
                           last_tag))
-
+            print("Shape from diag:", next_tag_sequence.shape)
             batch_scores = jnp.where(i + 1 == lengths,
                                      jnp.max(scores[:, i, :], axis=1),
                                      batch_scores)
 
             return (next_tag_sequence, batch_scores), next_tag_sequence
 
-        batch_scores, tag_sequences = jax.lax.scan(
+        (_, batch_scores), tag_sequences = jax.lax.scan(
             scan_fn,
             init=(tag_sequences[-1], batch_scores),
-            xs=jnp.arange(scores.shape[1], -1, -1),
+            xs=jnp.arange(scores.shape[1]-1, -1, -1),
         )
+        
         """FOR-LOOP equivalent
         for i in range(scores.shape[1] - 1, -1, -1):
 
@@ -281,7 +282,7 @@ class crf_layer(hk.Module):
         tag_sequences.reverse()
         return jnp.stack(tag_sequences[:-1], axis=1), batch_scores
         """
-        return jnp.flip(tag_sequences, axis=0), batch_scores
+        return jnp.transpose(jnp.flip(tag_sequences, axis=0)), batch_scores
 
     def weighted_ce(self, batch_logits: jnp.ndarray, lengths: jnp.ndarray,
                     batch_tags: jnp.ndarray) -> jnp.ndarray:
