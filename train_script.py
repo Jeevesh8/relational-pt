@@ -12,6 +12,7 @@ from flax.training import train_state
 
 import jax.numpy as jnp
 from jax.random import PRNGKey
+from jax.tree_util import tree_map
 from transformers import FlaxBigBirdModel
 from datasets import load_metric
 
@@ -22,9 +23,9 @@ from src.training.utils import load_relational_metric, batch_to_post_tags
 from src.training.optimizer import get_adam_opt
 from src.dataloaders.text_file_loader import get_tfds_dataset
 
-import jax.tools.colab_tpu
+#import jax.tools.colab_tpu
 
-jax.tools.colab_tpu.setup_tpu()
+#jax.tools.colab_tpu.setup_tpu()
 
 print("Devices detected: ", jax.local_devices())
 
@@ -77,7 +78,7 @@ class TrainState(train_state.TrainState):
     config: dict = flax.struct.field(pytree_node=False)
 
 
-def train_step(state, batch, key):
+def ctrain_step(state, batch, key):
     @jax.pmap
     def _comp_prediction_loss(params, state, batch, key):
         attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
@@ -103,9 +104,14 @@ def train_step(state, batch, key):
 
     grad_fn = jax.value_and_grad(comp_prediction_loss, has_aux=True)
     (cpl, key), grad = grad_fn(state.params, state, batch, key)
-    grad = jnp.mean(grad, axis=0)
-    state = state.apply_gradients(grads=flax.jax_utils.replicate(grad))
-    del grad
+    grad = tree_map(lambda x: jnp.mean(x, axis=0), grad)
+
+    state = flax.jax_utils.unreplicate(state)
+    state = state.apply_gradients(grads=grad)
+    state = flax.jax_utils.replicate(state)
+    return state, cpl, key
+
+def rtrain_step(state, batch, key): 
 
     @jax.pmap
     def _relation_prediction_loss(params, state, batch, key):
@@ -137,16 +143,14 @@ def train_step(state, batch, key):
         return jnp.mean(loss), key
 
     grad_fn = jax.value_and_grad(relation_prediction_loss, has_aux=True)
-    (rpl, key), grad = grad_fn(state.params, key)
-    grad = jnp.mean(grad, axis=0)
-    state = state.apply_gradients(grads=flax.jax_utils.replicate(grad))
+    (rpl, key), grad = grad_fn(state.params, state, batch, key)
+    grad = tree_map(lambda x:jnp.mean(x, axis=0), grad)
 
-    losses = {
-        "comp_pred_loss": jnp.mean(cpl),
-        "rel_pred_loss": jnp.mean(rpl),
-    }
-
-    return state, losses, key
+    state = flax.jax_utils.unreplicate(state)
+    state = state.apply_gradients(grads=grad)
+    state = flax.jax_utils.replicate(state)
+    
+    return state, rpl, key
 
 
 @jax.pmap
@@ -193,7 +197,7 @@ def get_rel_preds(state, batch, key):
 
 
 def get_preds(state, batch, key):
-    return get_rel_preds(state, batch, key), get_comp_preds(state, batch, key)
+    return get_comp_preds(state, batch, key), get_rel_preds(state, batch, key)
 
 
 comp_prediction_metric = load_metric("seqeval")
@@ -255,8 +259,12 @@ if __name__ == "__main__":
                                                  sample_comp_labels == 0,
                                                  sample_relations)
 
+    del sample_logits, sample_lengths, sample_comp_labels, sample_relations
+    
     params["embds_params"] = transformer_model.params
 
+    params = tree_map(lambda x: x.astype(jnp.bfloat16), params)
+    
     opt = get_adam_opt()
 
     init_train_state = TrainState.create(
@@ -269,7 +277,7 @@ if __name__ == "__main__":
         relation_predictor=pure_pr.apply,
         config=config,
     )
-
+     
     key = jax.random.split(key, stable_config["num_devices"])
 
     # parallel_train_step = jax.pmap(train_step, axis_name="device_axis")
@@ -279,6 +287,7 @@ if __name__ == "__main__":
 
     num_iters = 0
     loop_state = flax.jax_utils.replicate(init_train_state)
+    del init_train_state
 
     losses = {
         "comp_pred_loss": jnp.array([0.0]),
@@ -290,7 +299,13 @@ if __name__ == "__main__":
 
     for epoch in range(config["n_epochs"]):
         for batch in train_dataset:
-            loop_state, step_losses, key = train_step(loop_state, batch, key)
+            loop_state, cpl, key = ctrain_step(loop_state, batch, key)
+            loop_state, rpl, key = rtrain_step(loop_state, batch, key)
+            step_losses = {
+                     "comp_pred_loss": cpl,
+                     "rel_pred_loss": rpl,
+                    }
+
             losses = jax.tree_multimap(lambda x, y: x + y, losses, step_losses)
             num_iters += 1
 

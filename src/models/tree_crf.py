@@ -39,7 +39,7 @@ class tree_crf(hk.Module):
         partitions = jnp.eye(M, dtype=jnp.bool_)
         mst_energy = jnp.array([0.0])
         edges = []
-
+        """
         def scan_fn(carry, x):
             _ = x
             mst_energy, log_energies, partitions = carry
@@ -97,9 +97,10 @@ class tree_crf(hk.Module):
         (mst_energy, _,
          _), edges = jax.lax.scan(scan_fn,
                                   init=(mst_energy, log_energies, partitions),
-                                  xs=jnp.arange(M))
+                                  xs=jnp.arange(M),
+                                  unroll=M)
         return mst_energy, edges
-        """FOR-LOOP equivalent
+        """#FOR-LOOP equivalent
         for _ in range(M):
             max_index = jnp.unravel_index(jnp.argmax(log_energies), jnp.shape(log_energies))
             max_energy = log_energies[max_index]
@@ -151,7 +152,7 @@ class tree_crf(hk.Module):
             partitions = remove_garbage_dims(partitions)
 
         return mst_energy, jnp.concatenate(edges)
-        """
+       # """
 
     def mst(self,
             log_energies: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:

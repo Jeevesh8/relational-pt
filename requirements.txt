@@ -1,6 +1,5 @@
 jsonlist
-jaxlib
-jax
+jax[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
 dm-haiku
 sentencepiece
 git+https://github.com/huggingface/transformers

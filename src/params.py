@@ -9,7 +9,7 @@ config = {
         "relations": 0,
     },
     "batch_size":
-    2,
+    1,
     "post_tags": {
         "B": 0,
         "I": 1
@@ -20,8 +20,8 @@ config = {
     } for i in range(1, stable_config["max_users"] * 2, 2)],
     "n_epochs":
     5,
-    "train_files": ["./train.txt"],
-    "valid_files": ["./valid.txt"],
+    "train_files": ["../subtrees-text-4096-64-comps/train.txt"],
+    "valid_files": ["../subtrees-text-4096-64-comps/valid.txt"],
     "save_model_file":
     "../relational_pretrained.wts",
 }
@@ -39,7 +39,7 @@ config["opt"] = {
     "max_grad_norm":
     1.0,  # Gradients clipped at this norm. Use "None" for no clipping
     "total_steps":
-    2 * n_samples // (config["batch_size"] * stable_config["n_devices"]),
+    2 * n_samples // (config["batch_size"] * stable_config["num_devices"]),
     "restart_from":
     0,
     "use_schedule":
