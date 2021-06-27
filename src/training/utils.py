@@ -113,6 +113,11 @@ class relation_match_metric:
 def load_relational_metric(n_processes=None):
     return relation_match_metric(n_processes)
 
+def convert_ids_to_tags(lis, idx):
+        return [
+            "B-P" if config["post_tags"]["B"] == lis[i] else "I-P"
+            for i in range(0, idx)
+        ]
 
 def batch_to_post_tags(
         references: jnp.ndarray,
@@ -129,14 +134,7 @@ def batch_to_post_tags(
         Lists of references and predictions converted to string tags for each sample sequence in the batch.
     """
 
-    seq_lens = jnp.sum(references != config["pad_for"]["post_tags"],
-                       axis=-1).tolist()
-
-    def convert_ids_to_tags(lis, idx):
-        return [
-            "B-P" if config["post_tags"]["B"] == lis[i] else "I-P"
-            for i in range(0, idx)
-        ]
+    seq_lens = jnp.reshape(jnp.sum(references != config["pad_for"]["post_tags"], axis=-1), (-1)).tolist()
 
     with Pool(sum(seq_lens) // 10000 + 1) as p:
         predictions_lis = p.starmap(convert_ids_to_tags,
