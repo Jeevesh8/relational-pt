@@ -43,8 +43,10 @@ class relational_model(hk.Module):
             we set the energies to and from pad components to -infinity. We do the same from links from components
             to themselves.
         """
-        
-        log_energies = log_energies + jnp.stack([jnp.diag(jnp.array([-jnp.inf]*self.max_comps))]*self.n_rels, axis=-1)
+
+        log_energies = log_energies + jnp.stack(
+            [jnp.diag(jnp.array([-jnp.inf] * self.max_comps))] * self.n_rels,
+            axis=-1)
 
         log_energies = jax.ops.index_update(
             log_energies,
