@@ -129,8 +129,8 @@ def train_step(state, batch, key):
 
     return new_new_state, losses, key
 
-@jax.pmap
-def get_comp_preds(state, batch, key):
+@partial(jax.pmap, axis_name="device_axis")
+def get_comp_preds(state, batch):
 
     attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
     lengths = jnp.sum(attention_mask, axis=-1)
@@ -139,17 +139,16 @@ def get_comp_preds(state, batch, key):
         batch.input_ids,
         attention_mask,
         params=params["embds_params"],
-        dropout_rng=key,
         train=False,
     )["last_hidden_state"]
 
-    comp_preds = state.comp_predictor(params["comp_predictor"], key, logits,
-                                      lengths)
+    comp_preds = state.comp_predictor(params["comp_predictor"], jax.random.PRNGKey(42), logits,
+                                   lengths)
     return comp_preds
 
 
-@jax.pmap
-def get_rel_preds(state, batch, key):
+@partial(jax.pmap, axis_name="device_axis")
+def get_rel_preds(state, batch):
 
     attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
 
@@ -158,42 +157,34 @@ def get_rel_preds(state, batch, key):
         attention_mask,
         batch.post_tags,
         params=params["embds_params"],
-        dropout_rng=key,
         train=False,
     )["last_hidden_state"]
 
     rel_preds = state.relation_predictor(
         params["relation_predictor"],
-        key,
+        jax.random.PRNGKey(42),
         embds,
         batch.post_tags == state.config["post_tags"]["B"],
     )
-    print("Inside pmapped shape:", rel_preds.shape, embds.shape, batch.input_ids.shape)
     return rel_preds
 
 
-def get_preds(state, batch, key):
-    return get_comp_preds(state, batch, key), get_rel_preds(state, batch, key)
-
+def get_preds(state, batch):
+    return get_comp_preds(state, batch), get_rel_preds(state, batch)
 
 comp_prediction_metric = load_metric("seqeval")
 rel_prediction_metric = load_relational_metric()
 
 
-def eval_step(state, batch, key):
-    comp_preds, rel_preds = get_preds(state, batch, key)
-    print("Predicted components shape:", comp_preds.shape, rel_preds.shape)
+def eval_step(state, batch):
+    comp_preds, rel_preds = get_preds(state, batch)
     comp_preds = jnp.reshape(comp_preds, (-1, jnp.shape(comp_preds)[-1]))
     rel_preds = jnp.reshape(rel_preds, (-1, jnp.shape(rel_preds)[-2], 3))
     post_tags = jnp.reshape(batch.post_tags, (-1, batch.post_tags.shape[-1]))
     relations = jnp.reshape(batch.relations, (-1, batch.relations.shape[-2],3))
     references, predictions = batch_to_post_tags(post_tags, comp_preds)
     comp_prediction_metric.add_batch(predictions=predictions, references=references)
-    print("All shapes:", comp_preds.shape, post_tags.shape, rel_preds.shape, relations.shape)
     rel_prediction_metric.add_batch(rel_preds, relations)
-    print("All shapes:", comp_preds.shape, post_tags.shape, rel_preds.shape, relations.shape)
-    print("Component predictions:", comp_preds)
-    print("Relation predictions:", rel_preds)
 
 
 if __name__ == "__main__":
@@ -276,11 +267,34 @@ if __name__ == "__main__":
 
     losses = {"comp_pred_loss": jnp.array([0.0]), "rel_pred_loss": jnp.array([0.0])}
 
-    log_loss_n_iters = 1000
-    validation_n_iters = 10000
+    log_loss_n_iters = 100
+    validation_n_iters = 4000
 
     for epoch in range(config["n_epochs"]):
         for batch in train_dataset:
+            if num_iters % validation_n_iters == 0:
+                for v_batch in val_dataset:
+                    eval_step(loop_state, v_batch)
+                
+                print(
+                    "Component Prediction metrics for iterations",
+                    num_iters,
+                    "to",
+                    num_iters - validation_n_iters,
+                    ":",
+                    comp_prediction_metric.compute(),
+                )
+                print(
+                    "Relation Prediction metrics for iterations",
+                    num_iters,
+                    "to",
+                    num_iters - validation_n_iters,
+                    ":",
+                    rel_prediction_metric.compute(),
+                )
+                
+                val_dataset = get_tfds_dataset(config["valid_files"], config)
+            
             loop_state, step_losses, key = train_step(loop_state, batch, key)
             step_losses = jax.tree_util.tree_map(lambda x: jnp.mean(x, axis=0), step_losses)
             losses = jax.tree_multimap(lambda x, y: x + y, losses, step_losses)
@@ -305,26 +319,10 @@ if __name__ == "__main__":
                 )
                 losses["comp_pred_loss"] = 0.0
                 losses["rel_pred_loss"] = 0.0
- 
-            if num_iters % validation_n_iters == 0:
-                for batch in val_dataset:
-                    eval_step(loop_state, batch, key)
-                print(
-                    "Component Prediction metrics for iterations",
-                    num_iters,
-                    "to",
-                    num_iters - validation_n_iters,
-                    ":",
-                    comp_prediction_metric.compute(),
-                )
-                print(
-                    "Relation Prediction metrics for iterations",
-                    num_iters,
-                    "to",
-                    num_iters - validation_n_iters,
-                    ":",
-                    rel_prediction_metric.compute(),
-                )
+           
+               
+        train_dataset = get_tfds_dataset(config["train_files"], config)
+
 
     with open(config["save_model_file"], "wb+") as f:
 
