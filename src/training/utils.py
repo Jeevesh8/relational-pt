@@ -7,8 +7,9 @@ import jax.numpy as jnp
 from ..params import config
 
 
-def relational_metric(prediction: List[List[int]],
-                      reference: List[List[int]]) -> Tuple[int, int]:
+def relational_metric(
+    prediction: List[List[int]], reference: List[List[int]]
+) -> Tuple[int, int]:
     """
     Args:
         prediction:  A list of lists of form (i,j,k) where the tuple indicates a link from i to j of type k.
@@ -26,11 +27,11 @@ def relational_metric(prediction: List[List[int]],
         set_reference.add(tuple(elem))
 
     return len(set_prediction.intersection(set_reference)), len(
-        set_prediction.union(set_reference))
+        set_prediction.union(set_reference)
+    )
 
 
-def batch_to_relational_lists(predictions: jnp.ndarray,
-                              references: jnp.ndarray):
+def batch_to_relational_lists(predictions: jnp.ndarray, references: jnp.ndarray):
     """Converts padded relations batches predicted by model, and output by dataset iterator to
     lists of relations[list of tuples of form (link_from, link_to, rel_type)] in each sample.
     Args:
@@ -38,11 +39,11 @@ def batch_to_relational_lists(predictions: jnp.ndarray,
         references:     A batch of labels of the corresponding elements of predictions.
     """
     batchwise_num_pred_rels = jnp.sum(
-        jnp.sum(predictions == config["pad_for"]["relations"], axis=-1) != 3,
-        axis=-1)
+        jnp.sum(predictions == config["pad_for"]["relations"], axis=-1) != 3, axis=-1
+    )
     batchwise_num_ref_rels = jnp.sum(
-        jnp.sum(references == config["pad_for"]["relations"], axis=-1) != 3,
-        axis=-1)
+        jnp.sum(references == config["pad_for"]["relations"], axis=-1) != 3, axis=-1
+    )
 
     return (
         predictions.tolist(),
@@ -115,15 +116,15 @@ class relation_match_metric:
 def load_relational_metric(n_processes=None):
     return relation_match_metric(n_processes)
 
+
 def convert_ids_to_tags(lis, idx):
     return [
-            "B-P" if config["post_tags"]["B"] == lis[i] else "I-P"
-            for i in range(0, idx)
-           ]
+        "B-P" if config["post_tags"]["B"] == lis[i] else "I-P" for i in range(0, idx)
+    ]
 
 def batch_to_post_tags(
-        references: jnp.ndarray,
-        predictions: jnp.ndarray) -> Tuple[List[List[str]], List[List[str]]]:
+    references: jnp.ndarray, predictions: jnp.ndarray
+) -> Tuple[List[List[str]], List[List[str]]]:
     """
     Converts the post tags predicted by the model, and those output by the
     dataset iterator to actual labels like ['B-.', 'I-.'].
@@ -136,13 +137,16 @@ def batch_to_post_tags(
         Lists of references and predictions converted to string tags for each sample sequence in the batch.
     """
 
-    seq_lens = jnp.reshape(jnp.sum(references != config["pad_for"]["post_tags"],
-                       axis=-1), (-1)).tolist()
-  
+    seq_lens = jnp.reshape(
+        jnp.sum(references != config["pad_for"]["post_tags"], axis=-1), (-1)
+    ).tolist()
+
     with Pool(sum(seq_lens) // 10000 + 1) as p:
-        predictions_lis = p.starmap(convert_ids_to_tags,
-                                    zip(predictions.tolist(), seq_lens))
-        references_lis = p.starmap(convert_ids_to_tags,
-                                   zip(references.tolist(), seq_lens))
+        predictions_lis = p.starmap(
+            convert_ids_to_tags, zip(predictions.tolist(), seq_lens)
+        )
+        references_lis = p.starmap(
+            convert_ids_to_tags, zip(references.tolist(), seq_lens)
+        )
 
     return references_lis, predictions_lis
