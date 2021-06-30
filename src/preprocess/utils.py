@@ -206,7 +206,7 @@ def subtrees_lis(
             subtrees.append(make_text_from_trees(tree, root, preorder,
                                                  shuffle))
             tree = propagate_difference(tree, root_node, root,
-                                        tree[root]["subtree_size"])
+                                        tree[root]["subtree_size"]-2)
         else:
             core_recursion(tree, tree[root]["replies"][0])
 

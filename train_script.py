@@ -74,7 +74,6 @@ class TrainState(train_state.TrainState):
 
 @partial(jax.pmap, axis_name="device_axis", donate_argnums=(0,1,2))
 def train_step(state, batch, key):
-
     attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
     lengths = jnp.sum(attention_mask, axis=-1)
 
@@ -126,12 +125,10 @@ def train_step(state, batch, key):
         "comp_pred_loss": _comp_prediction_loss,
         "rel_pred_loss": _relation_prediction_loss,
     }
-
     return new_new_state, losses, key
 
-@partial(jax.pmap, axis_name="device_axis")
+@jax.pmap
 def get_comp_preds(state, batch):
-
     attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
     lengths = jnp.sum(attention_mask, axis=-1)
 
@@ -147,7 +144,7 @@ def get_comp_preds(state, batch):
     return comp_preds
 
 
-@partial(jax.pmap, axis_name="device_axis")
+@jax.pmap
 def get_rel_preds(state, batch):
 
     attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
@@ -238,9 +235,6 @@ if __name__ == "__main__":
 
     params["embds_params"] = transformer_model.params
 
-
-    #params = tree_map(lambda x: x.astype(jnp.bfloat16), params)
-    
     opt = get_adam_opt()
 
     init_train_state = TrainState.create(
@@ -256,8 +250,6 @@ if __name__ == "__main__":
 
     key = jax.random.split(key, stable_config["num_devices"])
 
-    # parallel_train_step = jax.pmap(train_step, axis_name="device_axis")
-
     train_dataset = get_tfds_dataset(config["train_files"], config)
     val_dataset = get_tfds_dataset(config["valid_files"], config)
 
@@ -271,35 +263,14 @@ if __name__ == "__main__":
     validation_n_iters = 4000
 
     for epoch in range(config["n_epochs"]):
+
         for batch in train_dataset:
-            if num_iters % validation_n_iters == 0:
-                for v_batch in val_dataset:
-                    eval_step(loop_state, v_batch)
-                
-                print(
-                    "Component Prediction metrics for iterations",
-                    num_iters,
-                    "to",
-                    num_iters - validation_n_iters,
-                    ":",
-                    comp_prediction_metric.compute(),
-                )
-                print(
-                    "Relation Prediction metrics for iterations",
-                    num_iters,
-                    "to",
-                    num_iters - validation_n_iters,
-                    ":",
-                    rel_prediction_metric.compute(),
-                )
-                
-                val_dataset = get_tfds_dataset(config["valid_files"], config)
-            
             loop_state, step_losses, key = train_step(loop_state, batch, key)
             step_losses = jax.tree_util.tree_map(lambda x: jnp.mean(x, axis=0), step_losses)
             losses = jax.tree_multimap(lambda x, y: x + y, losses, step_losses)
+            
             num_iters += 1
-
+            
             if num_iters % log_loss_n_iters == 0:
                 print(
                     "component prediction loss for iterations",
@@ -322,16 +293,19 @@ if __name__ == "__main__":
            
                
         train_dataset = get_tfds_dataset(config["train_files"], config)
+        
+        write_file = config["save_model_file"]+str(epoch)
+        with open(write_file, "wb+") as f:
 
-
-    with open(config["save_model_file"], "wb+") as f:
-
-        to_write = {"embds_params" : loop_state.params["embds_params"],
-                    "comp_predictor": to_mutable_dict(loop_state.params["comp_predictor"]),
-                    "relation_predictor": to_mutable_dict(loop_state.params["relation_predictor"]),
-                    }
+            to_write = {"embds_params" : loop_state.params["embds_params"],
+                        "comp_predictor": to_mutable_dict(loop_state.params["comp_predictor"]),
+                        "relation_predictor": to_mutable_dict(loop_state.params["relation_predictor"]),
+                        }
                     
-        f.write(
-                serialization.to_bytes(jax.tree_util.tree_map(lambda x: jnp.take(x, [0], axis=0), to_write)))
-        print("COMPLETER TRAINING. WEIGHTS STORED AT:",
-              config["save_model_file"])
+            f.write(
+                    serialization.to_bytes(jax.tree_util.tree_map(lambda x: jnp.take(x, [0], axis=0), to_write)))
+            print("COMPLETER TRAINING. WEIGHTS STORED AT:", write_file)
+
+
+
+

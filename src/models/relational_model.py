@@ -44,7 +44,7 @@ class relational_model(hk.Module):
             to themselves.
         """
         
-        log_energies = log_energies + jnp.stack([jnp.diag(jnp.array([-jnp.inf]*self.max_comps))]*self.n_rels, axis=-1)
+        log_energies = jnp.where(jnp.stack([jnp.diag(jnp.array([1]*self.max_comps))]*self.n_rels, axis=-1), -jnp.inf, log_energies)
 
         log_energies = jax.ops.index_update(
             log_energies,
@@ -68,11 +68,10 @@ class relational_model(hk.Module):
     def _call(self, embds: jnp.ndarray,
               choice_mask: jnp.ndarray) -> jnp.ndarray:
         """Single sample version of self.__call__(). See the same for documentation."""
-        choices = jnp.flip(
-            jnp.sort(
-                jnp.where(choice_mask, jnp.arange(jnp.shape(choice_mask)[0]),
-                          -1)))
-        indices = choices[:self.max_comps - 1]
+        num_all_embds = jnp.shape(choice_mask)[0]
+        choices = jnp.sort( jnp.where(choice_mask, jnp.arange(num_all_embds), num_all_embds))
+
+        indices = choices[:(self.max_comps - 1)]
 
         embds = jnp.pad(embds, pad_width=((0, 1), (0, 0)))
 
@@ -91,7 +90,7 @@ class relational_model(hk.Module):
 
         log_energies = jnp.dot(from_embds, to_embds)
 
-        pad_mask = jnp.pad(indices != -1, pad_width=(1, 0), constant_values=1)
+        pad_mask = jnp.pad(indices != num_all_embds, pad_width=(1, 0), constant_values=1)
 
         return self._format_log_energies(log_energies, pad_mask)
 
