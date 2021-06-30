@@ -40,19 +40,20 @@ def dict_to_full_tree(tree: dict) -> Tuple[dict, str]:
     tree["comments"][tree["id"]]["id"] = tree["id"]
     tree["comments"][tree["id"]]["parent_id"] = ""
     tree["comments"][tree["id"]]["author"] = tree["author"]
-    tree["comments"][tree["id"]]["body"] = ("<title> " + tree["title"] +
-                                            " </title> " + tree["selftext"])
+    tree["comments"][tree["id"]]["body"] = (
+        "<title> " + tree["title"] + " </title> " + tree["selftext"]
+    )
     tree["comments"][tree["id"]]["replies"] = [
-        id for id, comment in tree["comments"].items()
+        id
+        for id, comment in tree["comments"].items()
         if comment["parent_id"] == tree["id"]
     ]
     return tree["comments"], tree["id"]
 
 
-def size_subtrees(tree: dict,
-                  root: str,
-                  tokenizer=get_tokenizer(),
-                  extra_tokens: int = 1):
+def size_subtrees(
+    tree: dict, root: str, tokenizer=get_tokenizer(), extra_tokens: int = 1
+):
     """
     Args:
         tree:         The tree in full_tree format of dict_to_full_tree.
@@ -66,6 +67,7 @@ def size_subtrees(tree: dict,
         length of tokenizing the combined version of all the 'body' attributes of (all the
         nodes in the subtree(n) and the node (n) itself).
     """
+
     def core_recursion(tree: dict, root: str):
         self_length = len(tokenizer.encode(tree[root]["body"])) + extra_tokens
 
@@ -82,10 +84,9 @@ def size_subtrees(tree: dict,
     return tree, root
 
 
-def make_text_from_trees(tree: dict,
-                         root: str,
-                         preorder: bool = True,
-                         shuffle: bool = False) -> str:
+def make_text_from_trees(
+    tree: dict, root: str, preorder: bool = True, shuffle: bool = False
+) -> str:
     """
     Makes text sequence from subtree in tree rooted at root.
     Acts on trees in format of the tree output by size_subtrees().
@@ -109,11 +110,23 @@ def make_text_from_trees(tree: dict,
         )
         user_no = authors[author]
 
-        node_text = ("<post" + post_nos[post_id] + " parent_id= " +
-                     (str(None) if parent_id == "" else post_nos[parent_id]) +
-                     "> " + "<user" + user_no + "> " +
-                     tree[root]["body"].strip() + " </user" + user_no + ">" +
-                     " </post" + post_nos[post_id] + ">")
+        node_text = (
+            "<post"
+            + post_nos[post_id]
+            + " parent_id= "
+            + (str(None) if parent_id == "" else post_nos[parent_id])
+            + "> "
+            + "<user"
+            + user_no
+            + "> "
+            + tree[root]["body"].strip()
+            + " </user"
+            + user_no
+            + ">"
+            + " </post"
+            + post_nos[post_id]
+            + ">"
+        )
 
         if tree[root]["replies"] == []:
             return node_text
@@ -122,7 +135,8 @@ def make_text_from_trees(tree: dict,
 
         for i, reply_id in enumerate(tree[root]["replies"]):
             subtree_text += (" " if i != 0 else "") + core_recursion(
-                tree, reply_id, authors)
+                tree, reply_id, authors
+            )
 
         if not preorder:
             subtree_text += " " + node_text
@@ -147,8 +161,7 @@ def make_text_from_trees(tree: dict,
     return text
 
 
-def propagate_difference(tree: dict, root_node: str, start_node: str,
-                         diff: int):
+def propagate_difference(tree: dict, root_node: str, start_node: str, diff: int):
     """Subtracts diff from parent(p) of start_node, parent(pp) of p, parent of pp..
     upto the root node. Additionally deletes the subtree rooted at start_node
     from tree.Additionally, removes start_node from 'replies' of its parent.
@@ -201,12 +214,11 @@ def subtrees_lis(
 
     def core_recursion(tree: dict, root: str) -> int:
 
-        if tree[root]["subtree_size"] < threshold or tree[root][
-                "replies"] == []:
-            subtrees.append(make_text_from_trees(tree, root, preorder,
-                                                 shuffle))
-            tree = propagate_difference(tree, root_node, root,
-                                        tree[root]["subtree_size"]-2)
+        if tree[root]["subtree_size"] < threshold or tree[root]["replies"] == []:
+            subtrees.append(make_text_from_trees(tree, root, preorder, shuffle))
+            tree = propagate_difference(
+                tree, root_node, root, tree[root]["subtree_size"] - 2
+            )
         else:
             core_recursion(tree, tree[root]["replies"][0])
 
