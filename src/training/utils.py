@@ -52,7 +52,8 @@ def batch_to_relational_lists(predictions: jnp.ndarray, references: jnp.ndarray)
         batchwise_num_ref_rels.tolist(),
     )
 
-def calc_relation_metric(x, y, x_idx, y_idx): 
+
+def calc_relation_metric(x, y, x_idx, y_idx):
     return relational_metric(x[:x_idx], y[:y_idx])
 
 
@@ -121,6 +122,7 @@ def convert_ids_to_tags(lis, idx):
     return [
         "B-P" if config["post_tags"]["B"] == lis[i] else "I-P" for i in range(0, idx)
     ]
+
 
 def batch_to_post_tags(
     references: jnp.ndarray, predictions: jnp.ndarray
