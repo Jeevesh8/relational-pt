@@ -25,7 +25,7 @@ def get_all_trees(read_file):
         post_trees = [
             elem.strip() for elem in f.readlines()
             if not elem.startswith("-" * 14)
-            ][:24]
+            ]
 
     comment_pattern = (
         r"<post(\d+) parent_id= (.*?)> <user(\d+)>(.+?)<\/user\d+> <\/post\d+>"
