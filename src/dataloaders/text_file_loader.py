@@ -23,9 +23,8 @@ def remove_artifacts(tree):
 def get_all_trees(read_file):
     with open(read_file) as f:
         post_trees = [
-            elem.strip() for elem in f.readlines()
-            if not elem.startswith("-" * 14)
-            ]
+            elem.strip() for elem in f.readlines() if not elem.startswith("-" * 14)
+        ]
 
     comment_pattern = (
         r"<post(\d+) parent_id= (.*?)> <user(\d+)>(.+?)<\/user\d+> <\/post\d+>"
