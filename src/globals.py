@@ -1,7 +1,7 @@
 stable_config = {
     "max_len": 4096,
     "max_users": 128,
-    "max_comps": 64,  # Max. in dataset=103
+    "max_comps": 128,  # Max. in dataset=103
     "num_devices": 8,
     "checkpoint": "google/bigbird-roberta-base",
     "embed_dim": 768,

@@ -112,7 +112,7 @@ class tree_crf(hk.Module):
             max_link = jnp.where(
                 jnp.stack([updatable_sample] * n_rel_types, axis=-1),
                 jnp.squeeze(jnp.transpose(jnp.array(max_index))),
-                0.0,
+                0,
             )
 
             edges.append(max_link)
@@ -151,9 +151,7 @@ class tree_crf(hk.Module):
             )
             partitions = remove_garbage_dims(partitions)
 
-        return mst_energy, jnp.concatenate(edges)
-
-    # """
+        return mst_energy, jnp.stack(edges)
 
     def mst(self, log_energies: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
         """Finds the maximal spanning tree and its score.

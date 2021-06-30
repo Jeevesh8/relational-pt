@@ -23,8 +23,9 @@ def remove_artifacts(tree):
 def get_all_trees(read_file):
     with open(read_file) as f:
         post_trees = [
-            elem.strip() for elem in f.readlines() if not elem.startswith("-" * 14)
-        ][:100]
+            elem.strip() for elem in f.readlines()
+            if not elem.startswith("-" * 14)
+            ]
 
     comment_pattern = (
         r"<post(\d+) parent_id= (.*?)> <user(\d+)>(.+?)<\/user\d+> <\/post\d+>"
@@ -102,7 +103,7 @@ def get_tfds_dataset(file_lis, config):
                 config["pad_for"]["relations"],
             ),
         )
-        .batch(stable_config["num_devices"])
+        .batch(stable_config["num_devices"], drop_remainder=True)
         .map(convert_to_named_tuple)
     )
 
