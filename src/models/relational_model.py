@@ -7,11 +7,9 @@ import haiku as hk
 
 
 class relational_model(hk.Module):
-    def __init__(self,
-                 n_rels: int,
-                 max_comps: int,
-                 embed_dim: int,
-                 name: Optional[str] = None):
+    def __init__(
+        self, n_rels: int, max_comps: int, embed_dim: int, name: Optional[str] = None
+    ):
         """Constructs a model with a linear layer to get log energies for links between a number of
         components.
 
@@ -28,8 +26,9 @@ class relational_model(hk.Module):
         self.embed_dim = embed_dim
         self.w = hk.Linear(self.n_rels * self.embed_dim, with_bias=False)
 
-    def _format_log_energies(self, log_energies: jnp.ndarray,
-                             pad_mask: jnp.ndarray) -> jnp.ndarray:
+    def _format_log_energies(
+        self, log_energies: jnp.ndarray, pad_mask: jnp.ndarray
+    ) -> jnp.ndarray:
         """
         Args:
             log_energies:   A [self.max_comps, self.max_comps, self.n_rels] sized array, having the log energy for
@@ -43,8 +42,14 @@ class relational_model(hk.Module):
             we set the energies to and from pad components to -infinity. We do the same from links from components
             to themselves.
         """
-        
-        log_energies = jnp.where(jnp.stack([jnp.diag(jnp.array([1]*self.max_comps))]*self.n_rels, axis=-1), -jnp.inf, log_energies)
+
+        log_energies = jnp.where(
+            jnp.stack(
+                [jnp.diag(jnp.array([1] * self.max_comps))] * self.n_rels, axis=-1
+            ),
+            -jnp.inf,
+            log_energies,
+        )
 
         log_energies = jax.ops.index_update(
             log_energies,
@@ -56,28 +61,30 @@ class relational_model(hk.Module):
             -jnp.inf,
         )
 
-        available_from_to = jnp.logical_and(jnp.expand_dims(pad_mask, axis=-1),
-                                            pad_mask)
+        available_from_to = jnp.logical_and(
+            jnp.expand_dims(pad_mask, axis=-1), pad_mask
+        )
 
         formatted_log_energies = jnp.where(
-            available_from_to, jnp.transpose(log_energies, (2, 0, 1)),
-            -jnp.inf)
+            available_from_to, jnp.transpose(log_energies, (2, 0, 1)), -jnp.inf
+        )
 
         return jnp.transpose(formatted_log_energies, (1, 2, 0))
 
-    def _call(self, embds: jnp.ndarray,
-              choice_mask: jnp.ndarray) -> jnp.ndarray:
+    def _call(self, embds: jnp.ndarray, choice_mask: jnp.ndarray) -> jnp.ndarray:
         """Single sample version of self.__call__(). See the same for documentation."""
         num_all_embds = jnp.shape(choice_mask)[0]
-        choices = jnp.sort( jnp.where(choice_mask, jnp.arange(num_all_embds), num_all_embds))
+        choices = jnp.sort(
+            jnp.where(choice_mask, jnp.arange(num_all_embds), num_all_embds)
+        )
 
-        indices = choices[:(self.max_comps - 1)]
+        indices = choices[: (self.max_comps - 1)]
 
         embds = jnp.pad(embds, pad_width=((0, 1), (0, 0)))
 
-        from_embds = jnp.take_along_axis(embds,
-                                         jnp.expand_dims(indices, axis=-1),
-                                         axis=0)
+        from_embds = jnp.take_along_axis(
+            embds, jnp.expand_dims(indices, axis=-1), axis=0
+        )
 
         from_embds = jnp.pad(
             from_embds,
@@ -85,17 +92,17 @@ class relational_model(hk.Module):
             constant_values=((1, 0), (0, 0)),
         )
 
-        to_embds = jnp.reshape(self.w(from_embds),
-                               (-1, self.embed_dim, self.n_rels))
+        to_embds = jnp.reshape(self.w(from_embds), (-1, self.embed_dim, self.n_rels))
 
         log_energies = jnp.dot(from_embds, to_embds)
 
-        pad_mask = jnp.pad(indices != num_all_embds, pad_width=(1, 0), constant_values=1)
+        pad_mask = jnp.pad(
+            indices != num_all_embds, pad_width=(1, 0), constant_values=1
+        )
 
         return self._format_log_energies(log_energies, pad_mask)
 
-    def __call__(self, embds: jnp.ndarray,
-                 choice_mask: jnp.ndarray) -> jnp.ndarray:
+    def __call__(self, embds: jnp.ndarray, choice_mask: jnp.ndarray) -> jnp.ndarray:
         """
         Args:
             embds:        A [batch_size, seq_len, embed_dim] sized array having the embeddings of all the
