@@ -5,4 +5,5 @@ stable_config = {
     "num_devices": 8,
     "checkpoint": "google/bigbird-roberta-base",
     "embed_dim": 768,
+    "arg-mining-finetuning": False,
 }

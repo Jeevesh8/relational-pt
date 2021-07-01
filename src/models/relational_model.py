@@ -6,6 +6,45 @@ import jax.numpy as jnp
 import haiku as hk
 
 
+"""
+
+-------------------------------------------------A COMMENT ON THE STRUCTURE OF LOG_ENERGIES PRODUCED----------------------------------------------------------
+
+1. The indices going down, to the extreme left indicate a link from that index, and indices along the row at the top indicate a link to that index.
+
+2. No link from 0-th index to any index can be made.(A link to 0-th index denotes the component refers to no other component, i.e., refers = "None")
+
+3. No link from a component to itself, is possible. So all the dash(-)ed positions in the matrix below, have negative infinity in that location for 
+all relation types. 
+
+4. If a component is related to no other component, its relation type is autmatically "None". This means that positions marked with (*) have 
+negative infinity in all relation types, except "None".
+
+5. If the below matrix A, is to be padded with another matrix, corresponding to another thread, with say 3 components, then that thread's matrix(Matrix B)
+will be extended to size 5 and have all the extra(e) positions, filled with negative infinity, for all relation types.
+
+---------Matrix A--------
+    0   1   2   3   4   5
+0   -   -   -   -   -   -
+1   *   -
+2   *       -
+3   *           -
+4   *               -
+5   *                   -
+
+---------Matrix B--------
+    0   1   2   3   4   5
+0   -   -   -   -   e   e
+1   *   -           e   e
+2   *       -       e   e
+3   *           -   e   e
+4   e   e   e   e   e   e
+5   e   e   e   e   e   e
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+"""
+
 class relational_model(hk.Module):
     def __init__(
         self, n_rels: int, max_comps: int, embed_dim: int, name: Optional[str] = None

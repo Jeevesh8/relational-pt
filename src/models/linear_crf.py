@@ -253,7 +253,7 @@ class crf_layer(hk.Module):
             next_tag_sequence = jnp.diag(
                 jnp.where(i + 1 < lengths, tags[:, i + 1, prev_tag_sequence],
                           last_tag))
-            print("Shape from diag:", next_tag_sequence.shape)
+
             batch_scores = jnp.where(i + 1 == lengths,
                                      jnp.max(scores[:, i, :], axis=1),
                                      batch_scores)

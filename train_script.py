@@ -13,14 +13,13 @@ from flax.training import train_state
 
 import jax.numpy as jnp
 from jax.random import PRNGKey
-from jax.tree_util import tree_map
 from transformers import FlaxBigBirdModel
 from datasets import load_metric
 
 from src.globals import stable_config
 from src.params import config
-from src.models import crf_layer, tree_crf, relational_model
-from src.training.utils import load_relational_metric, batch_to_post_tags
+from src.models import pure_cpl, pure_rpl, pure_pc, pure_pr
+from src.training.utils import load_relational_metric, batch_to_post_tags, get_params_dict
 from src.training.optimizer import get_adam_opt
 from src.dataloaders.text_file_loader import get_tfds_dataset
 
@@ -29,47 +28,6 @@ from src.dataloaders.text_file_loader import get_tfds_dataset
 # jax.tools.colab_tpu.setup_tpu()
 
 print("Devices detected: ", jax.local_devices())
-
-
-def comp_prediction_loss(logits, lengths, label_tags):
-    return crf_layer(n_classes=2)(hk.Linear(2)(logits), lengths, label_tags)
-
-
-def relation_prediction_loss(embds, choice_mask, label_relations, max_comps,
-                             embed_dim):
-    model1 = relational_model(n_rels=1,
-                              max_comps=max_comps,
-                              embed_dim=embed_dim)
-    log_energies = model1(embds, choice_mask)
-    return tree_crf().disc_loss(log_energies, label_relations)
-
-
-relation_prediction_loss = partial(
-    relation_prediction_loss,
-    max_comps=stable_config["max_comps"],
-    embed_dim=stable_config["embed_dim"],
-)
-
-
-def predict_components(logits, lengths):
-    return crf_layer(n_classes=2).batch_viterbi_decode(
-        hk.Linear(2)(logits), lengths)[0]
-
-
-def predict_relations(embds, choice_mask, max_comps, embed_dim):
-    model1 = relational_model(n_rels=1,
-                              max_comps=max_comps,
-                              embed_dim=embed_dim)
-    log_energies = model1(embds, choice_mask)
-    return tree_crf().mst(log_energies)[1]
-
-
-predict_relations = partial(
-    predict_relations,
-    max_comps=stable_config["max_comps"],
-    embed_dim=stable_config["embed_dim"],
-)
-
 
 class TrainState(train_state.TrainState):
     comp_prediction_loss: Callable = flax.struct.field(pytree_node=False)
@@ -193,7 +151,6 @@ def eval_step(state, batch):
                                      references=references)
     rel_prediction_metric.add_batch(rel_preds, relations)
 
-
 if __name__ == "__main__":
 
     key = PRNGKey(42)
@@ -203,47 +160,10 @@ if __name__ == "__main__":
 
     tokenizer = get_tokenizer()
 
-    pure_cpl = hk.transform(comp_prediction_loss)
-    pure_rpl = hk.transform(relation_prediction_loss)
-
-    pure_pc = hk.transform(predict_components)
-    pure_pr = hk.transform(predict_relations)
-
-    params = {}
-
-    sample_logits = jnp.zeros(
-        (config["batch_size"], stable_config["max_len"],
-         stable_config["embed_dim"]),
-        dtype=jnp.float32,
-    )
-    sample_lengths = jnp.full((config["batch_size"]),
-                              stable_config["max_len"],
-                              dtype=jnp.int32)
-    sample_comp_labels = jax.random.randint(
-        key, (config["batch_size"], stable_config["max_len"]), 0, 2)
-
-    sample_relations = jax.random.randint(
-        key,
-        (config["batch_size"], stable_config["max_comps"], 3),
-        0,
-        stable_config["max_comps"],
-    )
-    sample_relations = jnp.where(jnp.array([True, True, False]),
-                                 sample_relations, 0)
-
+    transformer_model.resize_token_embeddings(len(tokenizer))
+    
     key, subkey = jax.random.split(key)
-    params["comp_predictor"] = pure_cpl.init(subkey, sample_logits,
-                                             sample_lengths,
-                                             sample_comp_labels)
-
-    key, subkey = jax.random.split(key)
-    params["relation_predictor"] = pure_rpl.init(subkey, sample_logits,
-                                                 sample_comp_labels == 0,
-                                                 sample_relations)
-
-    del sample_logits, sample_lengths, sample_comp_labels, sample_relations
-
-    params["embds_params"] = transformer_model.params
+    params = get_params_dict(subkey, transformer_model)
 
     opt = get_adam_opt()
 
