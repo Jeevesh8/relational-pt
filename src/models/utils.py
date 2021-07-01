@@ -17,7 +17,7 @@ def get_tokenizer():
     return tokenizer
 
 def get_hf_model(tokenizer_len: int):
-    model = FlaxAutoModel(stable_config["checkpoint"])
+    model = FlaxAutoModel.from_pretrained(stable_config["checkpoint"])
     original_embeds = model.params["embeddings"]["word_embeddings"]["embedding"]
     key = jax.random.PRNGKey(65)
     n_words, embed_dim = original_embeds.shape
