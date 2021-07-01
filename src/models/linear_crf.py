@@ -263,9 +263,8 @@ class crf_layer(hk.Module):
         (_, batch_scores), tag_sequences = jax.lax.scan(
             scan_fn,
             init=(tag_sequences[-1], batch_scores),
-            xs=jnp.arange(scores.shape[1]-1, -1, -1),
+            xs=jnp.arange(scores.shape[1] - 1, -1, -1),
         )
-        
         """FOR-LOOP equivalent
         for i in range(scores.shape[1] - 1, -1, -1):
 

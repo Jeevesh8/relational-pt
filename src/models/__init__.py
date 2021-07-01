@@ -7,6 +7,7 @@ from .tree_crf import tree_crf
 from .linear_crf import crf_layer
 from src.globals import stable_config
 
+
 def comp_prediction_loss(logits, lengths, label_tags):
     return crf_layer(n_classes=2)(hk.Linear(2)(logits), lengths, label_tags)
 

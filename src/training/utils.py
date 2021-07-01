@@ -12,6 +12,7 @@ from ..params import config
 from ..models import pure_cpl, pure_rpl
 from ..models.utils import get_samples
 
+
 def relational_metric(prediction: List[List[int]],
                       reference: List[List[int]]) -> Tuple[int, int]:
     """
@@ -56,7 +57,8 @@ def batch_to_relational_lists(predictions: jnp.ndarray,
         batchwise_num_ref_rels.tolist(),
     )
 
-def calc_relation_metric(x, y, x_idx, y_idx): 
+
+def calc_relation_metric(x, y, x_idx, y_idx):
     return relational_metric(x[:x_idx], y[:y_idx])
 
 
@@ -120,11 +122,13 @@ class relation_match_metric:
 def load_relational_metric(n_processes=None):
     return relation_match_metric(n_processes)
 
+
 def convert_ids_to_tags(lis, idx):
     return [
-            "B-P" if config["post_tags"]["B"] == lis[i] else "I-P"
-            for i in range(0, idx)
-           ]
+        "B-P" if config["post_tags"]["B"] == lis[i] else "I-P"
+        for i in range(0, idx)
+    ]
+
 
 def batch_to_post_tags(
         references: jnp.ndarray,
@@ -141,9 +145,10 @@ def batch_to_post_tags(
         Lists of references and predictions converted to string tags for each sample sequence in the batch.
     """
 
-    seq_lens = jnp.reshape(jnp.sum(references != config["pad_for"]["post_tags"],
-                       axis=-1), (-1)).tolist()
-  
+    seq_lens = jnp.reshape(
+        jnp.sum(references != config["pad_for"]["post_tags"], axis=-1),
+        (-1)).tolist()
+
     with Pool(sum(seq_lens) // 10000 + 1) as p:
         predictions_lis = p.starmap(convert_ids_to_tags,
                                     zip(predictions.tolist(), seq_lens))
@@ -152,14 +157,15 @@ def batch_to_post_tags(
 
     return references_lis, predictions_lis
 
-def get_params_dict(key, base_model, all_dicts: bool=False) -> dict:
+
+def get_params_dict(key, base_model, all_dicts: bool = False) -> dict:
     """Constructs a single dictionary compoesed of parameters of the transformer_model,
     together with the component prediction and relation prediction head's parameters.
     Args:
         key:                Random key for initializing parameters of relation prediction and
                             component prediction heads
         base_model:         A HF Flax transformer model, or any other embedding model initialized with pre-trained weights.
-        all_dicts:          bool to indicate whether we want all parameters to be stored in nested 
+        all_dicts:          bool to indicate whether we want all parameters to be stored in nested
                             python dicts or the haiku ones to be in FlatMap only.
     Returns:
         parmas dict with the following structure:
@@ -172,10 +178,12 @@ def get_params_dict(key, base_model, all_dicts: bool=False) -> dict:
     """
     params = {}
 
-    sample_logits, sample_lengths, sample_comp_labels, sample_relations = get_samples(config["batch_size"],
-                                                                                     stable_config["max_len"],
-                                                                                     stable_config["embed_dim"],
-                                                                                     stable_config["max_comps"])
+    sample_logits, sample_lengths, sample_comp_labels, sample_relations = get_samples(
+        config["batch_size"],
+        stable_config["max_len"],
+        stable_config["embed_dim"],
+        stable_config["max_comps"],
+    )
 
     key, subkey = jax.random.split(key)
     params["comp_predictor"] = pure_cpl.init(subkey, sample_logits,
@@ -186,14 +194,16 @@ def get_params_dict(key, base_model, all_dicts: bool=False) -> dict:
     params["relation_predictor"] = pure_rpl.init(subkey, sample_logits,
                                                  sample_comp_labels == 0,
                                                  sample_relations)
-    
+
     params["embds_params"] = base_model.params
-    
+
     if all_dicts:
         params["comp_predictor"] = to_mutable_dict(params["comp_predictor"])
-        params["relation_predictor"] = to_mutable_dict(params["relation_predictor"])
-    
+        params["relation_predictor"] = to_mutable_dict(
+            params["relation_predictor"])
+
     return params
+
 
 def load_model_wts(wts_file, base_model, to_hk_flat_map: bool = True) -> dict:
     """Loads wts from a binary file. Assumes wts are of the form output by src.training.utils.get_params_dict().
@@ -204,12 +214,15 @@ def load_model_wts(wts_file, base_model, to_hk_flat_map: bool = True) -> dict:
     Returns:
         The params dict with the same key value pairs as src.training.utils.get_params_dict()
     """
-    target = get_params_dict(jax.random.PRNGKey(12), base_model, all_dicts=True)
-    with open(wts_file, 'rb') as f:
+    target = get_params_dict(jax.random.PRNGKey(12),
+                             base_model,
+                             all_dicts=True)
+    with open(wts_file, "rb") as f:
         params = serialization.from_bytes(target, f.read())
-    
+
     if to_hk_flat_map:
         params["comp_predictor"] = to_immutable_dict(params["comp_predictor"])
-        params["relation_predictor"] = to_immutable_dict(params["relation_predictor"])
-    
+        params["relation_predictor"] = to_immutable_dict(
+            params["relation_predictor"])
+
     return params

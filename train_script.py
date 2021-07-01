@@ -19,7 +19,11 @@ from datasets import load_metric
 from src.globals import stable_config
 from src.params import config
 from src.models import pure_cpl, pure_rpl, pure_pc, pure_pr
-from src.training.utils import load_relational_metric, batch_to_post_tags, get_params_dict
+from src.training.utils import (
+    load_relational_metric,
+    batch_to_post_tags,
+    get_params_dict,
+)
 from src.training.optimizer import get_adam_opt
 from src.dataloaders.text_file_loader import get_tfds_dataset
 
@@ -28,6 +32,7 @@ from src.dataloaders.text_file_loader import get_tfds_dataset
 # jax.tools.colab_tpu.setup_tpu()
 
 print("Devices detected: ", jax.local_devices())
+
 
 class TrainState(train_state.TrainState):
     comp_prediction_loss: Callable = flax.struct.field(pytree_node=False)
@@ -151,6 +156,7 @@ def eval_step(state, batch):
                                      references=references)
     rel_prediction_metric.add_batch(rel_preds, relations)
 
+
 if __name__ == "__main__":
 
     key = PRNGKey(42)
@@ -161,7 +167,7 @@ if __name__ == "__main__":
     tokenizer = get_tokenizer()
 
     transformer_model.resize_token_embeddings(len(tokenizer))
-    
+
     key, subkey = jax.random.split(key)
     params = get_params_dict(subkey, transformer_model)
 
