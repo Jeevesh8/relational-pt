@@ -6,13 +6,12 @@ from ..params import config, tokenizer, user_token_indices
 from component_generator import generate_components
 from utils import convert_outputs_to_tensors, get_rel_type_idx, reencode_mask_tokens
 
+
 def get_arg_comp_lis(comp_type, length):
     """Returns a list of labels for a component of comp_type of specified length."""
-    assert comp_type in ["claim", "premise"], (
-        "Un-supported component type: "
-        + comp_type
-        + " Try changing 'arg_components' in config.py"
-    )
+    assert comp_type in ["claim", "premise"
+                         ], ("Un-supported component type: " + comp_type +
+                             " Try changing 'arg_components' in config.py")
     comp_type = "C" if comp_type == "claim" else "P"
     begin = config["arg_components"]["B-" + comp_type]
     intermediate = config["arg_components"]["I-" + comp_type]
@@ -31,7 +30,9 @@ def get_ref_link_lis(related_to, first_idx, last_idx) -> List[int]:
         refs = [config["dist_to_label"][related_to]]
     except:
         refs = [0]
-    return refs + [config["dist_to_label"][i] for i in range(first_idx, last_idx - 1)]
+    return refs + [
+        config["dist_to_label"][i] for i in range(first_idx, last_idx - 1)
+    ]
 
 
 def get_global_attention(tokenized_thread, user_token_indices):
@@ -55,15 +56,10 @@ def find_last_to_last(lis, elem_set) -> int:
 
 
 def get_tokenized_thread(
-    filename, mask_tokens=None
-) -> Tuple[
-    List[str],
-    Dict[str, int],
-    Dict[str, int],
-    Dict[str, Tuple[str, str]],
-    Dict[str, int],
-    Dict[str, str],
-]:
+    filename,
+    mask_tokens=None
+) -> Tuple[List[str], Dict[str, int], Dict[str, int], Dict[str, Tuple[
+        str, str]], Dict[str, int], Dict[str, str], ]:
     """Returns the tokenized version of thread present in filename. File must be an xml file of Ampersand data.
     Returns a tuple having:
         tokenized_thread: A 1-D integer List containing the input_ids output by tokenizer for the text in filename.
@@ -83,10 +79,11 @@ def get_tokenized_thread(
     for component_tup in generate_components(filename):
         component, comp_type, comp_id, refers, rel_type = component_tup
         encoding = tokenizer.encode(component)[1:-1]
-        if len(encoding)==0:	
-            print("Empty component: ", encoding, component)	
-        if mask_tokens is not None:	
-            encoding = reencode_mask_tokens(encoding, tokenizer, mask_tokens)[1]	
+        if len(encoding) == 0:
+            print("Empty component: ", encoding, component)
+        if mask_tokens is not None:
+            encoding = reencode_mask_tokens(encoding, tokenizer,
+                                            mask_tokens)[1]
         if comp_type in ["claim", "premise"]:
             begin_positions[comp_id] = len(tokenized_thread)
             end_positions[comp_id] = len(tokenized_thread) + len(encoding)
@@ -105,7 +102,7 @@ def get_tokenized_thread(
 
 
 @convert_outputs_to_tensors(dtype=tf.int32)
-def get_thread_with_labels(filename, mask_tokens: Optional[List[str]]=None):
+def get_thread_with_labels(filename, mask_tokens: Optional[List[str]] = None):
     """Returns the tokenized threads along with all the proper labels.
     Args:
         filename:       The xml whose data is to be tokenized.
@@ -127,14 +124,16 @@ def get_thread_with_labels(filename, mask_tokens: Optional[List[str]]=None):
         comp_types,
     ) = get_tokenized_thread(filename, mask_tokens)
 
-    comp_type_labels = [config["arg_components"]["other"]] * len(tokenized_thread)
+    comp_type_labels = [config["arg_components"]["other"]
+                        ] * len(tokenized_thread)
     attention_mask = [1] * len(tokenized_thread)
-    global_attention = get_global_attention(tokenized_thread, user_token_indices)
+    global_attention = get_global_attention(tokenized_thread,
+                                            user_token_indices)
 
     prev_end = 0
     refer_to_and_type = []
 
-    begin_pos_lis = [v for _,v in begin_positions.items()]
+    begin_pos_lis = [v for _, v in begin_positions.items()]
     begin_pos_lis.sort()
 
     for comp_id in begin_positions:
@@ -142,39 +141,65 @@ def get_thread_with_labels(filename, mask_tokens: Optional[List[str]]=None):
         begin, end = begin_positions[comp_id], end_positions[comp_id]
 
         if prev_end > begin:
-            raise AssertionError("Overlapping components! End of previous component: "
-                                + str(prev_end)
-                                + " .Beginning of next component: "
-                                + str(begin))
-                            
-        if not (0 <= begin <= end < len(tokenized_thread) or 0 <= prev_end + 1 <= begin <= end < len(tokenized_thread)):
-            raise AssertionError("Begin, and end are not correct." + str(begin)+ ", "
-                                + str(end))
+            raise AssertionError(
+                "Overlapping components! End of previous component: " +
+                str(prev_end) + " .Beginning of next component: " + str(begin))
 
-        comp_type_labels[begin:end] = get_arg_comp_lis(comp_types[comp_id], end - begin)
+        if not (0 <= begin <= end < len(tokenized_thread)
+                or 0 <= prev_end + 1 <= begin <= end < len(tokenized_thread)):
+            raise AssertionError("Begin, and end are not correct." +
+                                 str(begin) + ", " + str(end))
+
+        comp_type_labels[begin:end] = get_arg_comp_lis(comp_types[comp_id],
+                                                       end - begin)
 
         rel_type = get_rel_type_idx(str(rel))
 
         for j, ref_id in enumerate(str(ref).split("_")):
-            if j==0:
+            if j == 0:
                 if ref_id == "None":
-                    refer_to_and_type.append((begin_pos_lis.index(begin)+1, 0, rel_type))
+                    refer_to_and_type.append(
+                        (begin_pos_lis.index(begin) + 1, 0, rel_type))
                 else:
-                    if begin_pos_lis.index(begin)==begin_pos_lis.index(begin_positions[ref_id]):
-                        raise AssertionError("Erroneous link between begin source: ", str(begin), " and begin reference: ", str(begin_positions[ref_id]), " for begin positions dict: ", str(begin_positions), " and begin_pos_lis: ", str(begin_pos_lis), "Component id: ", str(comp_id), " Reference id: ", str(ref_id), " in thread ", str(filename))
-                    if comp_id!=ref_id:
-                        refer_to_and_type.append((begin_pos_lis.index(begin)+1, begin_pos_lis.index(begin_positions[ref_id])+1, rel_type))
+                    if begin_pos_lis.index(begin) == begin_pos_lis.index(
+                            begin_positions[ref_id]):
+                        raise AssertionError(
+                            "Erroneous link between begin source: ",
+                            str(begin),
+                            " and begin reference: ",
+                            str(begin_positions[ref_id]),
+                            " for begin positions dict: ",
+                            str(begin_positions),
+                            " and begin_pos_lis: ",
+                            str(begin_pos_lis),
+                            "Component id: ",
+                            str(comp_id),
+                            " Reference id: ",
+                            str(ref_id),
+                            " in thread ",
+                            str(filename),
+                        )
+                    if comp_id != ref_id:
+                        refer_to_and_type.append((
+                            begin_pos_lis.index(begin) + 1,
+                            begin_pos_lis.index(begin_positions[ref_id]) + 1,
+                            rel_type,
+                        ))
             else:
-                print("Skipping the extra link for component: ", comp_id, " to ", ref_id, " for file: ", filename)
+                print(
+                    "Skipping the extra link for component: ",
+                    comp_id,
+                    " to ",
+                    ref_id,
+                    " for file: ",
+                    filename,
+                )
 
         prev_end = end
 
-    assert (
-        len(tokenized_thread)
-        == len(comp_type_labels)
-        == len(attention_mask)
-        == len(global_attention)
-    ), "Incorrect Dataset Loading !!"
+    assert (len(tokenized_thread) == len(comp_type_labels) ==
+            len(attention_mask) ==
+            len(global_attention)), "Incorrect Dataset Loading !!"
 
     return (
         tokenized_thread,
@@ -188,7 +213,9 @@ def get_thread_with_labels(filename, mask_tokens: Optional[List[str]]=None):
 def get_model_inputs(file_lis):
     if type(file_lis) is str:
         if not os.path.isdir(file_lis):
-            raise ValueError("get_model_inputs() take either a directory name or file list as input! The provided argument is incorrect.")
+            raise ValueError(
+                "get_model_inputs() take either a directory name or file list as input! The provided argument is incorrect."
+            )
         file_lis = [os.path.join(file_lis, f) for f in os.listdir(file_lis)]
     for filename in file_lis:
         if not (os.path.isfile(filename) and filename.endswith(".xml")):
