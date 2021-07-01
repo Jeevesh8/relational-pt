@@ -1,8 +1,6 @@
 import argparse
 
-from transformers import FlaxAutoModel
-
-from src.models.utils import get_tokenizer
+from src.models.utils import get_hf_model, get_tokenizer
 from src.training.utils import load_model_wts
 
 if __name__ == "__main__":
@@ -33,10 +31,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    transformer_model = FlaxAutoModel(args.checkpoint)
+    
     tokenizer = get_tokenizer()
-    transformer_model = transformer_model.resize_token_embeddings(
-        len(tokenizer))
+    
+    transformer_model = get_hf_model(len(tokenizer))
 
     params = load_model_wts(args.wts_file, transformer_model)
     transformer_model.params = params["embds_params"]

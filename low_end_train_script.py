@@ -3,7 +3,7 @@ from typing import Callable
 
 from flax import serialization
 
-from src.models.utils import get_tokenizer
+from src.models.utils import get_hf_model, get_tokenizer
 
 import jax
 import flax
@@ -13,7 +13,6 @@ from flax.training import train_state
 import jax.numpy as jnp
 from jax.random import PRNGKey
 from jax.tree_util import tree_map
-from transformers import FlaxBigBirdModel
 from datasets import load_metric
 
 from src.globals import stable_config
@@ -228,9 +227,9 @@ if __name__ == "__main__":
 
     key = PRNGKey(42)
 
-    transformer_model = FlaxBigBirdModel.from_pretrained(
-        stable_config["checkpoint"], num_hidden_layers=11)
     tokenizer = get_tokenizer()
+
+    transformer_model = get_hf_model(len(tokenizer))
 
     pure_cpl = hk.transform(comp_prediction_loss)
     pure_rpl = hk.transform(relation_prediction_loss)
