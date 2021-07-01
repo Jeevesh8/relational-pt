@@ -96,7 +96,7 @@ def get_samples(
         max_comps,
     )
 
-    sample_relation_types = jnp.random.randint(key, (batch_size, max_comps, 3),
+    sample_relation_types = jax.random.randint(key, (batch_size, max_comps, 3),
                                                0, n_rel_types)
 
     sample_relations = jnp.where(jnp.array([True, True, False]),
