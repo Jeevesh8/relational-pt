@@ -35,8 +35,11 @@ def comp_prediction_loss(logits, lengths, label_tags):
     return crf_layer(n_classes=2)(hk.Linear(2)(logits), lengths, label_tags)
 
 
-def relation_prediction_loss(embds, choice_mask, label_relations, max_comps, embed_dim):
-    model1 = relational_model(n_rels=1, max_comps=max_comps, embed_dim=embed_dim)
+def relation_prediction_loss(embds, choice_mask, label_relations, max_comps,
+                             embed_dim):
+    model1 = relational_model(n_rels=1,
+                              max_comps=max_comps,
+                              embed_dim=embed_dim)
     log_energies = model1(embds, choice_mask)
     return tree_crf().disc_loss(log_energies, label_relations)
 
@@ -49,11 +52,14 @@ relation_prediction_loss = partial(
 
 
 def predict_components(logits, lengths):
-    return crf_layer(n_classes=2).batch_viterbi_decode(hk.Linear(2)(logits), lengths)[0]
+    return crf_layer(n_classes=2).batch_viterbi_decode(
+        hk.Linear(2)(logits), lengths)[0]
 
 
 def predict_relations(embds, choice_mask, max_comps, embed_dim):
-    model1 = relational_model(n_rels=1, max_comps=max_comps, embed_dim=embed_dim)
+    model1 = relational_model(n_rels=1,
+                              max_comps=max_comps,
+                              embed_dim=embed_dim)
     log_energies = model1(embds, choice_mask)
     return tree_crf().mst(log_energies)[1]
 
@@ -88,9 +94,8 @@ def train_step(state, batch, key):
             train=True,
         )["last_hidden_state"]
 
-        return state.comp_prediction_loss(
-            params["comp_predictor"], key, logits, lengths, batch.post_tags
-        )
+        return state.comp_prediction_loss(params["comp_predictor"], key,
+                                          logits, lengths, batch.post_tags)
 
     grad_fn = jax.value_and_grad(comp_prediction_loss)
     key, subkey = jax.random.split(key)
@@ -141,9 +146,8 @@ def get_comp_preds(state, batch):
         train=False,
     )["last_hidden_state"]
 
-    comp_preds = state.comp_predictor(
-        state.params["comp_predictor"], jax.random.PRNGKey(42), logits, lengths
-    )
+    comp_preds = state.comp_predictor(state.params["comp_predictor"],
+                                      jax.random.PRNGKey(42), logits, lengths)
     return comp_preds
 
 
@@ -182,9 +186,11 @@ def eval_step(state, batch):
     comp_preds = jnp.reshape(comp_preds, (-1, jnp.shape(comp_preds)[-1]))
     rel_preds = jnp.reshape(rel_preds, (-1, jnp.shape(rel_preds)[-2], 3))
     post_tags = jnp.reshape(batch.post_tags, (-1, batch.post_tags.shape[-1]))
-    relations = jnp.reshape(batch.relations, (-1, batch.relations.shape[-2], 3))
+    relations = jnp.reshape(batch.relations,
+                            (-1, batch.relations.shape[-2], 3))
     references, predictions = batch_to_post_tags(post_tags, comp_preds)
-    comp_prediction_metric.add_batch(predictions=predictions, references=references)
+    comp_prediction_metric.add_batch(predictions=predictions,
+                                     references=references)
     rel_prediction_metric.add_batch(rel_preds, relations)
 
 
@@ -193,8 +199,7 @@ if __name__ == "__main__":
     key = PRNGKey(42)
 
     transformer_model = FlaxBigBirdModel.from_pretrained(
-        stable_config["checkpoint"], num_hidden_layers=12
-    )
+        stable_config["checkpoint"], num_hidden_layers=12)
 
     tokenizer = get_tokenizer()
 
@@ -207,15 +212,15 @@ if __name__ == "__main__":
     params = {}
 
     sample_logits = jnp.zeros(
-        (config["batch_size"], stable_config["max_len"], stable_config["embed_dim"]),
+        (config["batch_size"], stable_config["max_len"],
+         stable_config["embed_dim"]),
         dtype=jnp.float32,
     )
-    sample_lengths = jnp.full(
-        (config["batch_size"]), stable_config["max_len"], dtype=jnp.int32
-    )
+    sample_lengths = jnp.full((config["batch_size"]),
+                              stable_config["max_len"],
+                              dtype=jnp.int32)
     sample_comp_labels = jax.random.randint(
-        key, (config["batch_size"], stable_config["max_len"]), 0, 2
-    )
+        key, (config["batch_size"], stable_config["max_len"]), 0, 2)
 
     sample_relations = jax.random.randint(
         key,
@@ -223,17 +228,18 @@ if __name__ == "__main__":
         0,
         stable_config["max_comps"],
     )
-    sample_relations = jnp.where(jnp.array([True, True, False]), sample_relations, 0)
+    sample_relations = jnp.where(jnp.array([True, True, False]),
+                                 sample_relations, 0)
 
     key, subkey = jax.random.split(key)
-    params["comp_predictor"] = pure_cpl.init(
-        subkey, sample_logits, sample_lengths, sample_comp_labels
-    )
+    params["comp_predictor"] = pure_cpl.init(subkey, sample_logits,
+                                             sample_lengths,
+                                             sample_comp_labels)
 
     key, subkey = jax.random.split(key)
-    params["relation_predictor"] = pure_rpl.init(
-        subkey, sample_logits, sample_comp_labels == 0, sample_relations
-    )
+    params["relation_predictor"] = pure_rpl.init(subkey, sample_logits,
+                                                 sample_comp_labels == 0,
+                                                 sample_relations)
 
     del sample_logits, sample_lengths, sample_comp_labels, sample_relations
 
@@ -261,7 +267,10 @@ if __name__ == "__main__":
     loop_state = flax.jax_utils.replicate(init_train_state)
     del init_train_state
 
-    losses = {"comp_pred_loss": jnp.array([0.0]), "rel_pred_loss": jnp.array([0.0])}
+    losses = {
+        "comp_pred_loss": jnp.array([0.0]),
+        "rel_pred_loss": jnp.array([0.0])
+    }
 
     log_loss_n_iters = 100
     validation_n_iters = 4000
@@ -270,9 +279,8 @@ if __name__ == "__main__":
 
         for batch in train_dataset:
             loop_state, step_losses, key = train_step(loop_state, batch, key)
-            step_losses = jax.tree_util.tree_map(
-                lambda x: jnp.mean(x, axis=0), step_losses
-            )
+            step_losses = jax.tree_util.tree_map(lambda x: jnp.mean(x, axis=0),
+                                                 step_losses)
             losses = jax.tree_multimap(lambda x, y: x + y, losses, step_losses)
 
             num_iters += 1
@@ -296,11 +304,11 @@ if __name__ == "__main__":
                 )
                 losses["comp_pred_loss"] = 0.0
                 losses["rel_pred_loss"] = 0.0
-            
-            if num_iters%validation_n_iters==0:
+
+            if num_iters % validation_n_iters == 0:
                 for v_batch in val_dataset:
                     eval_step(loop_state, v_batch)
-                
+
                 print(
                     "Component Prediction metrics for iterations",
                     num_iters,
@@ -317,26 +325,26 @@ if __name__ == "__main__":
                     ":",
                     rel_prediction_metric.compute(),
                 )
-                
+
                 val_dataset = get_tfds_dataset(config["valid_files"], config)
 
         train_dataset = get_tfds_dataset(config["train_files"], config)
 
         write_file = config["save_model_file"] + str(epoch)
-        
+
         with open(write_file, "wb+") as f:
 
             to_write = {
-                "embds_params": loop_state.params["embds_params"],
-                "comp_predictor": to_mutable_dict(loop_state.params["comp_predictor"]),
-                "relation_predictor": to_mutable_dict(
-                    loop_state.params["relation_predictor"]
-                ),
+                "embds_params":
+                loop_state.params["embds_params"],
+                "comp_predictor":
+                to_mutable_dict(loop_state.params["comp_predictor"]),
+                "relation_predictor":
+                to_mutable_dict(loop_state.params["relation_predictor"]),
             }
 
             f.write(
                 serialization.to_bytes(
-                    jax.tree_util.tree_map(lambda x: jnp.take(x, [0], axis=0), to_write)
-                )
-            )
+                    jax.tree_util.tree_map(lambda x: jnp.take(x, [0], axis=0),
+                                           to_write)))
             print("Another Train Epoch. WEIGHTS STORED AT:", write_file)
