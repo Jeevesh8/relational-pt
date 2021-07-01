@@ -299,7 +299,6 @@ if __name__ == "__main__":
             
             if num_iters%validation_n_iters==0:
                 for v_batch in val_dataset:
-                    print("ENTERING TO COMPILE eval_step")
                     eval_step(loop_state, v_batch)
                 
                 print(
