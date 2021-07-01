@@ -137,12 +137,12 @@ def get_comp_preds(state, batch):
     logits = state.apply_fn(
         batch.input_ids,
         attention_mask,
-        params=params["embds_params"],
+        params=state.params["embds_params"],
         train=False,
     )["last_hidden_state"]
 
     comp_preds = state.comp_predictor(
-        params["comp_predictor"], jax.random.PRNGKey(42), logits, lengths
+        state.params["comp_predictor"], jax.random.PRNGKey(42), logits, lengths
     )
     return comp_preds
 
@@ -156,12 +156,12 @@ def get_rel_preds(state, batch):
         batch.input_ids,
         attention_mask,
         batch.post_tags,
-        params=params["embds_params"],
+        params=state.params["embds_params"],
         train=False,
     )["last_hidden_state"]
 
     rel_preds = state.relation_predictor(
-        params["relation_predictor"],
+        state.params["relation_predictor"],
         jax.random.PRNGKey(42),
         embds,
         batch.post_tags == state.config["post_tags"]["B"],
@@ -296,10 +296,35 @@ if __name__ == "__main__":
                 )
                 losses["comp_pred_loss"] = 0.0
                 losses["rel_pred_loss"] = 0.0
+            
+            if num_iters%validation_n_iters==0:
+                for v_batch in val_dataset:
+                    print("ENTERING TO COMPILE eval_step")
+                    eval_step(loop_state, v_batch)
+                
+                print(
+                    "Component Prediction metrics for iterations",
+                    num_iters,
+                    "to",
+                    num_iters - validation_n_iters,
+                    ":",
+                    comp_prediction_metric.compute(),
+                )
+                print(
+                    "Relation Prediction metrics for iterations",
+                    num_iters,
+                    "to",
+                    num_iters - validation_n_iters,
+                    ":",
+                    rel_prediction_metric.compute(),
+                )
+                
+                val_dataset = get_tfds_dataset(config["valid_files"], config)
 
         train_dataset = get_tfds_dataset(config["train_files"], config)
 
         write_file = config["save_model_file"] + str(epoch)
+        
         with open(write_file, "wb+") as f:
 
             to_write = {
@@ -315,4 +340,4 @@ if __name__ == "__main__":
                     jax.tree_util.tree_map(lambda x: jnp.take(x, [0], axis=0), to_write)
                 )
             )
-            print("COMPLETER TRAINING. WEIGHTS STORED AT:", write_file)
+            print("Another Train Epoch. WEIGHTS STORED AT:", write_file)
