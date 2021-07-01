@@ -2,7 +2,7 @@ from typing import Tuple
 
 import jax
 import jax.numpy as jnp
-from transformers import FlaxAutoTokenizer, FlaxAutoModel
+from transformers import AutoTokenizer, FlaxAutoModel
 
 from ..globals import stable_config
 
@@ -12,7 +12,7 @@ sp_tokens = ["[URL]", "[STARTQ]", "[ENDQ]", "[UNU]"] + [
 
 
 def get_tokenizer():
-    tokenizer = FlaxAutoTokenizer.from_pretrained(stable_config["checkpoint"])
+    tokenizer = AutoTokenizer.from_pretrained(stable_config["checkpoint"])
     tokenizer.add_tokens(sp_tokens)
     return tokenizer
 
