@@ -16,15 +16,24 @@ def get_tokenizer():
     tokenizer.add_tokens(sp_tokens)
     return tokenizer
 
+
 def get_hf_model(tokenizer_len: int):
-    model = FlaxAutoModel.from_pretrained(stable_config["checkpoint"], vocab_size=tokenizer_len)
-    original_embeds = model.params["embeddings"]["word_embeddings"]["embedding"]
+    model = FlaxAutoModel.from_pretrained(stable_config["checkpoint"],
+                                          vocab_size=tokenizer_len)
+    original_embeds = model.params["embeddings"]["word_embeddings"][
+        "embedding"]
     key = jax.random.PRNGKey(65)
     n_words, embed_dim = original_embeds.shape
-    if tokenizer_len>n_words:
-        additional_embeds = jax.random.normal(key, shape=(tokenizer_len-n_words, embed_dim), dtype=original_embeds.dtype)
-        model.params["embeddings"]["word_embeddings"]["embedding"] = jnp.concatenate([original_embeds, additional_embeds])
+    if tokenizer_len > n_words:
+        additional_embeds = jax.random.normal(key,
+                                              shape=(tokenizer_len - n_words,
+                                                     embed_dim),
+                                              dtype=original_embeds.dtype)
+        model.params["embeddings"]["word_embeddings"][
+            "embedding"] = jnp.concatenate(
+                [original_embeds, additional_embeds])
     return model
+
 
 def add_garbage_dims(array):
     """Adds extra slice at last of every dimension, filled with zeros."""
