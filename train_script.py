@@ -195,7 +195,7 @@ if __name__ == "__main__":
     }
 
     log_loss_n_iters = 100
-    validation_n_iters = 4000
+    validation_n_iters = 12000
 
     for epoch in range(config["n_epochs"]):
 
