@@ -124,7 +124,9 @@ def load_dataset(
         raise ValueError("Train, test valid sizes must sum to 100")
 
     if cmv_modes_dir is None:
-        os.system(shlex.quote("git clone https://github.com/chridey/change-my-view-modes"))
+        os.system(
+            shlex.quote(
+                "git clone https://github.com/chridey/change-my-view-modes"))
         cmv_modes_dir = os.path.join(os.getcwd(), "change-my-view-modes/v2.0/")
 
     splits = get_op_wise_split(glob.glob(os.path.join(cmv_modes_dir, "*/*")))
