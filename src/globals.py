@@ -1,4 +1,4 @@
-from frozendict import frozendict
+from flax.core.frozen_dict import freeze
 
 stable_config = {
     "max_len": 4096,
@@ -9,4 +9,4 @@ stable_config = {
     "embed_dim": 768,
 }
 
-stable_config = frozendict(stable_config)
+stable_config = freeze(stable_config)

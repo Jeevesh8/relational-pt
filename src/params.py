@@ -1,4 +1,4 @@
-from frozendict import frozendict
+from flax.core.frozen_dict import freeze
 
 from .globals import stable_config
 from .models.utils import get_tokenizer
@@ -52,4 +52,4 @@ config["opt"] = {
 
 tokenizer = get_tokenizer()    
 
-config = frozendict(config)
+config = freeze(config)

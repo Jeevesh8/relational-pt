@@ -1,4 +1,4 @@
-from frozendict import frozendict
+from flax.core.frozen_dict import freeze
 
 ft_config = {
     'batch_size': 1,
@@ -7,4 +7,4 @@ ft_config = {
     'n_epochs': 10,
 }
 
-ft_config = frozendict(ft_config)
+ft_config = freeze(ft_config)
