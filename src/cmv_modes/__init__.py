@@ -1,4 +1,4 @@
-import os, shlex
+import os, shlex, glob
 import random
 from typing import List, Dict
 from collections import namedtuple
@@ -10,7 +10,8 @@ from bs4 import BeautifulSoup
 from .tokenize_components import get_model_inputs
 from ..params import config
 from ..globals import stable_config
-from configs import config as arg_mining_config
+from .configs import config as data_config
+from ..arg_mining_ft.params import ft_config
 
 cmv_modes_data = namedtuple(
     "cmv_modes_data",
@@ -20,7 +21,7 @@ cmv_modes_data = namedtuple(
     ],
 )
 
-if arg_mining_config["omit_filenames"]:
+if data_config["omit_filenames"]:
     cmv_modes_data = namedtuple(
         "cmv_modes_data",
         ["tokenized_threads", "comp_type_labels", "refers_to_and_type"],
@@ -37,7 +38,7 @@ def convert_to_named_tuple(filenames, tokenized_threads, comp_type_labels,
 
 
 convert_to_named_tuple = partial(
-    convert_to_named_tuple, omit_filenames=arg_mining_config["omit_filenames"])
+    convert_to_named_tuple, omit_filenames=data_config["omit_filenames"])
 
 
 def data_generator(file_list: List[str]):
@@ -66,15 +67,18 @@ def get_dataset(file_list: List[str]):
                           name="refers_to_and_type"),
         ),
     ).padded_batch(
-        config["batch_size"],
+        ft_config["batch_size"],
         padded_shapes=(
             [],
             [stable_config["max_len"]],
             [stable_config["max_len"]],
             [stable_config["max_len"], 3],
         ),
-        padding_values=(None, *tuple(config["pad_for"].values())),
-    ).map(convert_to_named_tuple))
+        padding_values=(None, *tuple(data_config["pad_for"].values())),
+    )
+    .batch(stable_config["num_devices"], drop_remainder=True)
+    .map(convert_to_named_tuple)
+    )
 
 
 def get_op_wise_split(filelist: List[str]) -> Dict[str, List[str]]:
@@ -87,7 +91,7 @@ def get_op_wise_split(filelist: List[str]) -> Dict[str, List[str]]:
             continue
         with open(filepath) as f:
             xml_string = f.read()
-        parsed_xml = BeautifulSoup(xml_string, "xml")
+        parsed_xml = BeautifulSoup(xml_string, "lxml")
         op_id = parsed_xml.thread["id"]
         if op_id not in splits:
             splits[op_id] = []
@@ -120,12 +124,14 @@ def load_dataset(
         raise ValueError("Train, test valid sizes must sum to 100")
 
     if cmv_modes_dir is None:
-        os.system(shlex.quote("git clone https://github.com/chridey/change-my-view-modes"))
+        os.system(
+            shlex.quote(
+                "git clone https://github.com/chridey/change-my-view-modes"))
         cmv_modes_dir = os.path.join(os.getcwd(), "change-my-view-modes/v2.0/")
 
-    splits = get_op_wise_split(os.path.list.dir(cmv_modes_dir))
+    splits = get_op_wise_split(glob.glob(os.path.join(cmv_modes_dir, "*/*")))
 
-    op_wise_splits_lis = splits.values()
+    op_wise_splits_lis = list(splits.values())
     if shuffle:
         random.shuffle(op_wise_splits_lis)
 
@@ -161,8 +167,8 @@ def load_dataset(
     test_dataset = None if len(test_files) == 0 else get_dataset(test_files)
 
     if as_numpy_iter:
-        train_dataset = train_dataset.as_numpy_iterator()
-        valid_dataset = valid_dataset.as_numpy_iterator()
-        test_dataset = test_dataset.as_numpy_iterator()
+        train_dataset = None if train_dataset is None else train_dataset.as_numpy_iterator()
+        valid_dataset = None if valid_dataset is None else valid_dataset.as_numpy_iterator()
+        test_dataset = None if test_dataset is None else test_dataset.as_numpy_iterator()
 
     return train_dataset, valid_dataset, test_dataset

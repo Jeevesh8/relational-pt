@@ -127,7 +127,6 @@ class tree_crf(hk.Module):
                 (
                     from_partition,
                     jnp.expand_dims(to_partition, axis=-1),
-                    jnp.arange(n_rel_types),
                 ),
                 -jnp.inf,
             )
@@ -136,7 +135,6 @@ class tree_crf(hk.Module):
                 (
                     to_partition,
                     jnp.expand_dims(from_partition, axis=-1),
-                    jnp.arange(n_rel_types),
                 ),
                 -jnp.inf,
             )

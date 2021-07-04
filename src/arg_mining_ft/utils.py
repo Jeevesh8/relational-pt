@@ -30,7 +30,6 @@ def get_transition_mat(
 
     random_transition_mat = (rng.uniform(
         size=(5, 5),
-        dtype=np.float32,
     ) + 0.05)
     ac_dict = data_config["arg_components"]
 
@@ -58,7 +57,7 @@ def get_transition_mat(
         [ac_dict["B-P"], ac_dict["B-C"]]] = pt_transition_mat[1, 0]
 
     random_transition_mat[ac_dict["I-C"],
-                          ac_dict["I_C"]] = pt_transition_mat[1, 1]
+                          ac_dict["I-C"]] = pt_transition_mat[1, 1]
     random_transition_mat[ac_dict["I-P"],
                           ac_dict["I-P"]] = pt_transition_mat[1, 1]
 
@@ -124,7 +123,7 @@ def get_params_dict(key: jnp.ndarray,
         ft_params["comp_predictor"]["transition_matrix"] = get_transition_mat()
 
     ft_params["comp_predictor"] = to_immutable_dict(
-        ft_params["cmop_predictor"])
+        ft_params["comp_predictor"])
     ft_params["embds_params"] = pt_params["embds_params"]
 
     return ft_params

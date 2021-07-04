@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 from transformers import AutoTokenizer, FlaxAutoModel
 
-from globals import stable_config
+from .globals import stable_config
 
 sp_tokens = ["[URL]", "[STARTQ]", "[ENDQ]", "[UNU]"] + [
     "[USER" + str(i) + "]" for i in range(stable_config["max_users"])
@@ -23,7 +23,8 @@ def get_hf_model(tokenizer_len: int,
     embeddings are added **after** the existing ones.
     """
     model = FlaxAutoModel.from_pretrained(stable_config["checkpoint"],
-                                          vocab_size=tokenizer_len)
+                                          vocab_size=tokenizer_len,
+                                          type_vocab_size=token_types)
 
     original_embeds = model.params["embeddings"]["word_embeddings"][
         "embedding"]

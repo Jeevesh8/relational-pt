@@ -26,29 +26,33 @@ config = {
     "valid_files": ["../subtrees-text-4096/valid.txt"],
     "save_model_file":
     "../relational_pretrained.wts",
+    "arg_mining_ft":  False,
 }
 
 n_samples = 0
-for filename in config["train_files"]:
-    with open(filename) as f:
-        for elem in f.read().split("\n"):
-            if not elem.startswith("-" * 14):
-                n_samples += 1
 
-config["opt"] = {
-    "lr":
-    0.0001,
-    "max_grad_norm":
-    1.0,  # Gradients clipped at this norm. Use "None" for no clipping
-    "total_steps":
-    2 * n_samples // (config["batch_size"] * stable_config["num_devices"]),
-    "restart_from":
-    0,
-    "use_schedule":
-    True,
-    "weight_decay":
-    None,  # Use "None" for no weight decay; adamw will be used if it is not None.
-}
+if not config["arg_mining_ft"]:
+
+    for filename in config["train_files"]:
+        with open(filename) as f:
+            for elem in f.read().split("\n"):
+                if not elem.startswith("-" * 14):
+                    n_samples += 1
+
+    config["opt"] = {
+        "lr":
+        0.0001,
+        "max_grad_norm":
+        1.0,  # Gradients clipped at this norm. Use "None" for no clipping
+        "total_steps":
+        2 * n_samples // (config["batch_size"] * stable_config["num_devices"]),
+        "restart_from":
+        0,
+        "use_schedule":
+        True,
+        "weight_decay":
+        None,  # Use "None" for no weight decay; adamw will be used if it is not None.
+    }
 
 tokenizer = get_tokenizer()
 
