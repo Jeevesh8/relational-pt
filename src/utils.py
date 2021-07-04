@@ -22,9 +22,11 @@ def get_hf_model(tokenizer_len: int,
     added to vocabulary and any additional token types that you want to add. All the extra
     embeddings are added **after** the existing ones.
     """
-    model = FlaxAutoModel.from_pretrained(stable_config["checkpoint"],
-                                          vocab_size=tokenizer_len,
-                                          type_vocab_size=token_types)
+    model = FlaxAutoModel.from_pretrained(
+        stable_config["checkpoint"],
+        vocab_size=tokenizer_len,
+        type_vocab_size=token_types,
+    )
 
     original_embeds = model.params["embeddings"]["word_embeddings"][
         "embedding"]
