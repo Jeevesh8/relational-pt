@@ -145,8 +145,8 @@ def get_components(
                 ):
                     yield _
             else:
-                for _ in get_components(part, comp_type, parent_id, parent_refers,
-                                        parent_rel_type):
+                for _ in get_components(part, comp_type, parent_id,
+                                        parent_refers, parent_rel_type):
                     yield _
 
     if str(component).strip() == "":
