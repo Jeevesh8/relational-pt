@@ -3,32 +3,24 @@ from typing import Callable
 
 import jax
 import flax
-from haiku.data_structures import to_mutable_dict
-from flax import serialization
 from flax.training import train_state
 
 import jax.numpy as jnp
 from jax.random import PRNGKey
 from datasets import load_metric
 
-from src.globals import stable_config
-from src.params import config
-from src.models import pure_cpl, pure_rpl, pure_pc, pure_pr
+from src.cmv_modes import load_dataset
+from src.cmv_modes.configs import config as data_config
+from src.models import ft_pure_cpl, ft_pure_rpl, ft_pure_pc, ft_pure_pr
 from src.models.utils import get_hf_model, get_tokenizer
-from src.training.utils import (
-    load_relational_metric,
-    batch_to_post_tags,
-    get_params_dict,
-)
+from src.arg_mining_ft.utils import get_params_dict
+from src.arg_mining_ft.params import ft_config
 from src.training.optimizer import get_adam_opt
-from src.dataloaders.text_file_loader import get_tfds_dataset
+from src.training.utils import load_relational_metric, batch_to_post_tags
 
-# import jax.tools.colab_tpu
-
-# jax.tools.colab_tpu.setup_tpu()
+from src.globals import stable_config
 
 print("Devices detected: ", jax.local_devices())
-
 
 class TrainState(train_state.TrainState):
     comp_prediction_loss: Callable = flax.struct.field(pytree_node=False)
@@ -37,16 +29,15 @@ class TrainState(train_state.TrainState):
     relation_predictor: Callable = flax.struct.field(pytree_node=False)
     config: dict = flax.struct.field(pytree_node=False)
 
-
 @partial(jax.pmap, axis_name="device_axis", donate_argnums=(0, 1, 2))
 def train_step(state, batch, key):
-    attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
+    attention_mask = batch.tokenized_threads != state.config["pad_for"]["tokenized_thread"]
     lengths = jnp.sum(attention_mask, axis=-1)
 
     def comp_prediction_loss(params, key):
         key, subkey = jax.random.split(key)
         logits = state.apply_fn(
-            batch.input_ids,
+            batch.tokenized_threads,
             attention_mask,
             params=params["embds_params"],
             dropout_rng=subkey,
@@ -54,7 +45,7 @@ def train_step(state, batch, key):
         )["last_hidden_state"]
 
         return state.comp_prediction_loss(params["comp_predictor"], key,
-                                          logits, lengths, batch.post_tags)
+                                          logits, lengths, batch.comp_type_labels)
 
     grad_fn = jax.value_and_grad(comp_prediction_loss)
     key, subkey = jax.random.split(key)
@@ -65,9 +56,9 @@ def train_step(state, batch, key):
     def relation_prediction_loss(params, key):
         key, subkey = jax.random.split(key)
         embds = state.apply_fn(
-            batch.input_ids,
+            batch.tokenized_threads,
             attention_mask,
-            batch.post_tags,
+            batch.comp_type_labels,
             params=params["embds_params"],
             dropout_rng=subkey,
             train=True,
@@ -76,8 +67,8 @@ def train_step(state, batch, key):
             params["relation_predictor"],
             key,
             embds,
-            batch.post_tags == state.config["post_tags"]["B"],
-            batch.relations,
+            jnp.logical_or(batch.comp_type_labels == state.config["arg_components"]["B-C"], batch.comp_type_labels == state.config["arg_components"]["B-P"]),
+            batch.refers_to_and_type,
         )
 
     grad_fn = jax.value_and_grad(relation_prediction_loss)
@@ -92,14 +83,13 @@ def train_step(state, batch, key):
     }
     return new_new_state, losses, key
 
-
 @jax.pmap
 def get_comp_preds(state, batch):
-    attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
+    attention_mask = batch.tokenized_threads != state.config["pad_for"]["tokenized_thread"]
     lengths = jnp.sum(attention_mask, axis=-1)
 
     logits = state.apply_fn(
-        batch.input_ids,
+        batch.tokenized_threads,
         attention_mask,
         params=state.params["embds_params"],
         train=False,
@@ -107,18 +97,18 @@ def get_comp_preds(state, batch):
 
     comp_preds = state.comp_predictor(state.params["comp_predictor"],
                                       jax.random.PRNGKey(42), logits, lengths)
-    return comp_preds
+    return comp_preds, lengths
 
 
 @jax.pmap
 def get_rel_preds(state, batch):
 
-    attention_mask = batch.input_ids != state.config["pad_for"]["input_ids"]
+    attention_mask = batch.tokenized_threads != state.config["pad_for"]["tokenized_thread"]
 
     embds = state.apply_fn(
-        batch.input_ids,
+        batch.tokenized_threads,
         attention_mask,
-        batch.post_tags,
+        batch.comp_type_labels,
         params=state.params["embds_params"],
         train=False,
     )["last_hidden_state"]
@@ -127,7 +117,7 @@ def get_rel_preds(state, batch):
         state.params["relation_predictor"],
         jax.random.PRNGKey(42),
         embds,
-        batch.post_tags == state.config["post_tags"]["B"],
+        jnp.logical_or(batch.comp_type_labels == state.config["arg_components"]["B-C"], batch.comp_type_labels == state.config["arg_components"]["B-P"]),
     )
     return rel_preds
 
@@ -139,19 +129,23 @@ def get_preds(state, batch):
 comp_prediction_metric = load_metric("seqeval")
 rel_prediction_metric = load_relational_metric()
 
-
 def eval_step(state, batch):
-    comp_preds, rel_preds = get_preds(state, batch)
+    (comp_preds, lengths), rel_preds = get_preds(state, batch)
     comp_preds = jnp.reshape(comp_preds, (-1, jnp.shape(comp_preds)[-1]))
+    lengths = jnp.reshape(lengths, (-1))
     rel_preds = jnp.reshape(rel_preds, (-1, jnp.shape(rel_preds)[-2], 3))
-    post_tags = jnp.reshape(batch.post_tags, (-1, batch.post_tags.shape[-1]))
-    relations = jnp.reshape(batch.relations,
-                            (-1, batch.relations.shape[-2], 3))
-    references, predictions = batch_to_post_tags(post_tags, comp_preds)
+    post_tags = jnp.reshape(batch.comp_type_labels, (-1, batch.comp_type_labels.shape[-1]))
+    relations = jnp.reshape(batch.refers_to_and_type,
+                            (-1, batch.refers_to_and_type.shape[-2], 3))
+    
+    references, predictions = batch_to_post_tags(post_tags, comp_preds,
+                                                 tags_dict=state.config["arg_components"],
+                                                 seq_lens=lengths)
+    
     comp_prediction_metric.add_batch(predictions=predictions,
                                      references=references)
+    
     rel_prediction_metric.add_batch(rel_preds, relations)
-
 
 if __name__ == "__main__":
 
@@ -159,10 +153,10 @@ if __name__ == "__main__":
 
     tokenizer = get_tokenizer()
 
-    transformer_model = get_hf_model(len(tokenizer))
+    transformer_model = get_hf_model(len(tokenizer), token_types=len(data_config["arg_components"]))
 
     key, subkey = jax.random.split(key)
-    params = get_params_dict(subkey, transformer_model)
+    params = get_params_dict(subkey, transformer_model, ft_config["pt_wts_file"], use_pt_for_heads=False)
 
     opt = get_adam_opt()
 
@@ -170,17 +164,16 @@ if __name__ == "__main__":
         apply_fn=transformer_model.__call__,
         params=params,
         tx=opt,
-        comp_prediction_loss=pure_cpl.apply,
-        relation_prediction_loss=pure_rpl.apply,
-        comp_predictor=pure_pc.apply,
-        relation_predictor=pure_pr.apply,
-        config=config,
+        comp_prediction_loss=ft_pure_cpl.apply,
+        relation_prediction_loss=ft_pure_rpl.apply,
+        comp_predictor=ft_pure_pc.apply,
+        relation_predictor=ft_pure_pr.apply,
+        config=data_config,
     )
 
     key = jax.random.split(key, stable_config["num_devices"])
 
-    train_dataset = get_tfds_dataset(config["train_files"], config)
-    val_dataset = get_tfds_dataset(config["valid_files"], config)
+    train_dataset, _, test_dataset = load_dataset(ft_config["cmv_modes_dir"], train_sz=80, test_sz=20)
 
     num_iters = 0
     loop_state = flax.jax_utils.replicate(init_train_state)
@@ -191,10 +184,9 @@ if __name__ == "__main__":
         "rel_pred_loss": jnp.array([0.0])
     }
 
-    log_loss_n_iters = 100
-    validation_n_iters = 12000
+    log_loss_n_iters = 50
 
-    for epoch in range(config["n_epochs"]):
+    for epoch in range(ft_config["n_epochs"]):
 
         for batch in train_dataset:
             loop_state, step_losses, key = train_step(loop_state, batch, key)
@@ -224,46 +216,11 @@ if __name__ == "__main__":
                 losses["comp_pred_loss"] = 0.0
                 losses["rel_pred_loss"] = 0.0
 
-            if num_iters % validation_n_iters == 0:
-                for v_batch in val_dataset:
-                    eval_step(loop_state, v_batch)
+            
+        for v_batch in test_dataset:
+            eval_step(loop_state, v_batch)
 
-                print(
-                    "Component Prediction metrics for iterations",
-                    num_iters - validation_n_iters,
-                    "to",
-                    num_iters,
-                    ":",
-                    comp_prediction_metric.compute(),
-                )
-                print(
-                    "Relation Prediction metrics for iterations",
-                    num_iters - validation_n_iters,
-                    "to",
-                    num_iters,
-                    ":",
-                    rel_prediction_metric.compute(),
-                )
+        print(f"Component Prediction metrics after epoch {epoch} :", comp_prediction_metric.compute())
+        print(f"Relation Prediction metrics after epoch {epoch} :", rel_prediction_metric.compute())
 
-                val_dataset = get_tfds_dataset(config["valid_files"], config)
-
-        train_dataset = get_tfds_dataset(config["train_files"], config)
-
-        write_file = config["save_model_file"] + str(epoch)
-
-        with open(write_file, "wb+") as f:
-
-            to_write = {
-                "embds_params":
-                loop_state.params["embds_params"],
-                "comp_predictor":
-                to_mutable_dict(loop_state.params["comp_predictor"]),
-                "relation_predictor":
-                to_mutable_dict(loop_state.params["relation_predictor"]),
-            }
-
-            f.write(
-                serialization.to_bytes(
-                    jax.tree_util.tree_map(lambda x: jnp.squeeze(jnp.take(x, [0], axis=0)),
-                                           to_write)))
-            print("Another Train Epoch. WEIGHTS STORED AT:", write_file)
+        train_dataset, _, test_dataset = load_dataset(ft_config["cmv_modes_dir"], train_sz=80, test_sz=20)

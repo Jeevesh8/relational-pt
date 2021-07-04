@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple, Dict
 from multiprocessing import Pool
 from functools import reduce
 
@@ -123,37 +123,42 @@ def load_relational_metric(n_processes=None):
     return relation_match_metric(n_processes)
 
 
-def convert_ids_to_tags(lis, idx):
-    return [
-        "B-P" if config["post_tags"]["B"] == lis[i] else "I-P"
-        for i in range(0, idx)
-    ]
+def convert_ids_to_tags(lis, idx, tags_dict: Dict[str, int]=config["post_tags"]):
+    int_to_tags = {v : k for k, v in tags_dict.items()}
+    return [int_to_tags[lis[i]] for i in range(0, idx)]
 
 
 def batch_to_post_tags(
         references: jnp.ndarray,
-        predictions: jnp.ndarray) -> Tuple[List[List[str]], List[List[str]]]:
+        predictions: jnp.ndarray,
+        tags_dict: Dict[str, int] = config["post_tags"],
+        seq_lens: Optional[jnp.ndarray] = None,
+        pad_id: int = config["pad_for"]["post_tags"],) -> Tuple[List[List[str]], List[List[str]]]:
     """
     Converts the post tags predicted by the model, and those output by the
     dataset iterator to actual labels like ['B-.', 'I-.'].
     Args:
         references:     Reference labels batch output by dataset iterator. Must have pad labels
-                        at padded positions. Expected size: [batch_size, max_len]
+                        at padded positions. Expected size: [batch_size, max_len].
         predictions:    Predictions by the model for a batch of input sequences. These don't need to have
-                        pad labels at padded positions. Expected size: [batch_size, max_len]
+                        pad labels at padded positions. Expected size: [batch_size, max_len].
+        tags_dict:      A dictionaary from tag to the integer label it corresponds to. E.G. {"B-P" : 0, "I-P" : 1}.
+        seq_lens:       The lengths of various sequences in the batch that references/predictions correspond to.
+        pad_id:         The id of pad token in reference / relation labels. Only used in case seq_lens is not provided.
     Returns:
         Lists of references and predictions converted to string tags for each sample sequence in the batch.
     """
-
-    seq_lens = jnp.reshape(
-        jnp.sum(references != config["pad_for"]["post_tags"], axis=-1),
-        (-1)).tolist()
-
+    if seq_lens is None:
+        seq_lens = jnp.reshape( jnp.sum(references != pad_id, axis=-1), (-1) )
+    seq_lens = seq_lens.tolist()
+    
+    tags_dict = [tags_dict]*len(seq_lens)
+    
     with Pool(sum(seq_lens) // 10000 + 1) as p:
         predictions_lis = p.starmap(convert_ids_to_tags,
-                                    zip(predictions.tolist(), seq_lens))
+                                    zip(predictions.tolist(), seq_lens, tags_dict))
         references_lis = p.starmap(convert_ids_to_tags,
-                                   zip(references.tolist(), seq_lens))
+                                    zip(references.tolist(), seq_lens, tags_dict))
 
     return references_lis, predictions_lis
 
@@ -205,7 +210,7 @@ def get_params_dict(key, base_model, all_dicts: bool = False) -> dict:
     return params
 
 
-def load_model_wts(wts_file, base_model, to_hk_flat_map: bool = True) -> dict:
+def load_model_wts(base_model, wts_file:Optional[str] = None, to_hk_flat_map: bool = True) -> dict:
     """Loads wts from a binary file. Assumes wts are of the form output by src.training.utils.get_params_dict().
     Args:
         wts_file:       The file havnig serialized bytes corresponding to the weights to be loaded.
@@ -217,8 +222,9 @@ def load_model_wts(wts_file, base_model, to_hk_flat_map: bool = True) -> dict:
     target = get_params_dict(jax.random.PRNGKey(12),
                              base_model,
                              all_dicts=True)
-    with open(wts_file, "rb") as f:
-        params = serialization.from_bytes(target, f.read())
+    if wts_file is not None:
+        with open(wts_file, "rb") as f:
+            params = serialization.from_bytes(target, f.read())
 
     if to_hk_flat_map:
         params["comp_predictor"] = to_immutable_dict(params["comp_predictor"])

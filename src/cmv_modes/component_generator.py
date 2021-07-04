@@ -4,6 +4,9 @@ import re
 from bs4 import BeautifulSoup
 from typing import Optional
 
+footnote_regex = r"(\n\&gt;\*Hello[\S]*)"
+url_regex = r"(https?://)(\s)*(www\.)?(\s)*((\w|\s)+\.)*([\w\-\s]+/)*([\w\-]+)((\?)?[\w\s]*=\s*[\w\%&]*)*(\.html|\.htm)*"
+quote_regex = r"\&gt;(.*)\n"
 
 def clean_text(text):
     """Replaces HTML specific punctuations and symbols to their commonly occuring counterparts.
@@ -35,26 +38,21 @@ def add_tags(post, user_dict):
         user_dict[post["author"]] = len(user_dict)
 
     text = str(post)  # Note 2
-    #    print("Before adding tags:", text)
 
     user_tag = "[USER" + str(user_dict[post["author"]]) + "]"
 
-    pattern0 = r"(\n\&gt;\*Hello[\S]*)"
-    pattern1 = r"(https?://)(\s)*(www\.)?(\s)*((\w|\s)+\.)*([\w\-\s]+/)*([\w\-]+)((\?)?[\w\s]*=\s*[\w\%&]*)*(\.html|\.htm)*"
-    pattern2 = r"\&gt;(.*)\n"
-
-    text = text.replace("</claim>", "</claim> ")
-    text = text.replace("<claim", " <claim")
-    text = text.replace("<premise", " <premise")
-    text = text.replace("</premise>", "</premise> ")
-    text = re.sub(pattern0, "", text)  # Replace Footnotes
-    text = re.sub(pattern1, "[URL]", text)  # Replace [URL]
-    text = re.sub(pattern2, "[STARTQ]" + r"\1" + "[ENDQ] ",
-                  text)  # Replace quoted text
+    for elem in [("</claim>", "</claim> "), ("<claim", " <claim"),
+                 ("<premise", " <premise"), ("</premise>", "</premise> ")]:
+        text = text.replace(*elem)
+    
+    text = re.sub(footnote_regex, "", text)
+    text = re.sub(url_regex, "[URL]", text)
+    text = re.sub(quote_regex, "[STARTQ]" + r"\1" + "[ENDQ] ", text)
+    
     text = text.replace("\n", " ")
     text = text.replace("\r", " ")
-    #    print("after adding tags:", text)
-    return str(text), user_tag
+    
+    return text, user_tag
 
 
 def get_components(
@@ -64,35 +62,73 @@ def get_components(
     parent_refers: Optional[str] = None,
     parent_rel_type: Optional[str] = None,
 ):
-    """Yields nested components from a parsed component one-by-one. In the form:
-    (text, type, id, refers, relation_type)
-    text:          The text of the component
-    type:          other/claim/premise
-    id:            The id of the component, None for Non-Argumentative
-    refers:        The ids of the component the current component is related to. None, if it isn't related to any component(separated with _)
-    relation_type: The type of relation between current component and refers. None, iff refers is None.
     """
+    Args:
+        component:       A parsed component, with 0 to any number of nested <claim> / <premise> tags
+        
+        parent_type:     The type of immediatel enclosing tag of the component. If the initial component is "<claim1> abc <premise> bfd </premise> ghj </claim1>"
+                         its immediate enclosing type is None, as the recursion rolls over all the components in <claim> tags, viz. "abc", "<premise> bfd </premise>", 
+                         "ghj"; all of their parent_type are claim, when recursion rolls inside <premise> tags, over "bfd" its parent type is premise.The three of 
+                         these are yielded as distinct components. Let "abc", "ghj" be called the "stubs" of the current component.(The parts directly under 
+                         the outermost tags.)
+        
+        parent_id:       The id of the immediate enclosing tags of a component. Initially None. The id of "abc" is same as id of claim1 tags, 
+                         the id of "ghj" is id of claim1 tag + "Ć", similarly more "Ć" appended for following stubs of the current component. 
+        
+        parent_refers:   The component referred by the immediate enclosing tag of the current component. Initially None. The parent_refers of "abc" is the "ref" 
+                         attribute of claim1 tags, the parent of "ghj" is the id of previous("abc") stub, similarly each stub refers to its previous one.
+        
+        parent_rel_type: The relation type with which the immediate enclosing tag is connected to parent_refers. Initially None. Propagated similar to 
+                         parent_refers, with relation type "continue". First stub's relation type same as immediate enclosing tag's.
+    
+    Yields:
+        Mested components from a parsed component one-by-one. In the form (text, type, id, refers, relation_type) where:
+            text:          The text of the component
+            type:          other/claim/premise
+            id:            The id of the component, None for Non-Argumentative
+            refers:        The ids of the component the current component is related to. None, if it isn't related to any component(separated with _)
+            relation_type: The type of relation between current component and refers. None, iff refers is None.
+    """
+    def is_stub(part):
+        return (not str(part).strip().startswith("<claim")
+                and not str(part).strip().startswith("<premise"))
+    
+    def is_first_stub(parts, part):
+        for elem in parts:
+            if is_stub(str(elem).strip()):
+                return elem == part
+    
     def chain_yield(comp_type="claim"):
+        """Recursion; only entered when component has an enclosing tag like <claim> or <premise>.
+        Otherwise, the component is returned with parent_id, parent_refers and parent_rel_type.
+        For each part in the current component, calls get_components() with the appropriate parent_* 
+        attributes.
+        """
         nonlocal component
         component = str(component)
         parsed_component = BeautifulSoup(component, "xml")
 
+        #Get Top Most Tag's Attributes
         parent_id = str(parsed_component.find(comp_type)["id"])
         try:
             parent_refers = str(parsed_component.find(comp_type)["ref"])
             parent_rel_type = str(parsed_component.find(comp_type)["rel"])
-        except:
+        except KeyError:
             parent_refers = None
             parent_rel_type = None
 
+        stub_parent_id, stub_parent_refers, stub_parent_rel_type = parent_id, parent_refers, parent_rel_type
         for part in parsed_component.find(comp_type).contents:
 
-            if (not str(part).strip().startswith("<claim")
-                    and not str(part).strip().startswith("<premise") and
-                    not part == parsed_component.find(comp_type).contents[0]):
-                parent_ref = parent_id
-                parent_id += "Ć"
-                parent_rel_type = "cont"
+            if is_stub(part):  
+                if not is_first_stub(parsed_component.find(comp_type).contents, part):
+                    stub_parent_refers = stub_parent_id
+                    stub_parent_id += "Ć"
+                    stub_parent_rel_type = "cont"
+                
+                for _ in get_components(part, comp_type, stub_parent_id, stub_parent_refers,
+                                        stub_parent_rel_type):
+                    yield _
 
             for _ in get_components(part, comp_type, parent_id, parent_refers,
                                     parent_rel_type):
@@ -164,7 +200,7 @@ def generate_components(filename):
 
 def get_all_threads():
     for t in ["negative", "positive"]:
-        root = "AmpersandData/change-my-view-modes/v2.0/" + t + "/"
+        root = "./change-my-view-modes/v2.0/" + t + "/"
         for f in os.listdir(root):
             filename = os.path.join(root, f)
 

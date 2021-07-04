@@ -363,6 +363,6 @@ if __name__ == "__main__":
 
     with open(config["save_model_file"], "wb+") as f:
         f.write(
-                serialization.to_bytes(jax.tree_util.tree_map(lambda x: jnp.take(x,[0],axis=0), loop_state.params))
-        print("COMPLETER TRAINING. WEIGHTS STORED AT:",
+                serialization.to_bytes(jax.tree_util.tree_map(lambda x: jnp.take(x,[0],axis=0), loop_state.params)))
+        print("COMPLETED TRAINING. WEIGHTS STORED AT:",
               config["save_model_file"])
