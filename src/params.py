@@ -1,7 +1,7 @@
 from flax.core.frozen_dict import freeze
 
 from .globals import stable_config
-from .models.utils import get_tokenizer
+from .utils import get_tokenizer
 
 config = {
     "pad_for": {

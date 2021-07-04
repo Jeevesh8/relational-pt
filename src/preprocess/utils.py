@@ -2,7 +2,7 @@ import random
 
 from typing import Tuple, List
 
-from ..models.utils import get_tokenizer
+from ..utils import get_tokenizer
 
 
 def dict_to_full_tree(tree: dict) -> Tuple[dict, str]:

@@ -10,7 +10,7 @@ from haiku.data_structures import to_mutable_dict, to_immutable_dict
 from ..globals import stable_config
 from ..params import config
 from ..models import pure_cpl, pure_rpl
-from ..models.utils import get_samples
+from ..models import get_samples
 
 
 def relational_metric(prediction: List[List[int]],

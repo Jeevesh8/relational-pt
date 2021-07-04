@@ -1,8 +1,6 @@
 from flax.core.frozen_dict import freeze
 
-from ..models.utils import get_tokenizer
-
-tokenizer = get_tokenizer()
+from ..params import tokenizer
 
 config = {
     "relations": [

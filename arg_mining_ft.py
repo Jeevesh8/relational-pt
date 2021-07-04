@@ -12,7 +12,7 @@ from datasets import load_metric
 from src.cmv_modes import load_dataset
 from src.cmv_modes.configs import config as data_config
 from src.models import ft_pure_cpl, ft_pure_rpl, ft_pure_pc, ft_pure_pr
-from src.models.utils import get_hf_model, get_tokenizer
+from src.utils import get_hf_model, get_tokenizer
 from src.arg_mining_ft.utils import get_params_dict
 from src.arg_mining_ft.params import ft_config
 from src.training.optimizer import get_adam_opt

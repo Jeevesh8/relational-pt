@@ -3,7 +3,7 @@ from typing import Callable
 
 from flax import serialization
 
-from src.models.utils import get_hf_model, get_tokenizer
+from src.utils import get_hf_model, get_tokenizer
 
 import jax
 import flax

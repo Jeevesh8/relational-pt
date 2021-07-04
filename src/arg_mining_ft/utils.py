@@ -9,7 +9,7 @@ from .params import ft_config
 from ..cmv_modes.configs import config as data_config
 from ..training.utils import load_model_wts
 from ..models import ft_pure_cpl, ft_pure_rpl, copy_weights
-from ..models.utils import get_samples
+from ..models import get_samples
 from ..globals import stable_config
 
 

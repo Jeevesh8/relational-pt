@@ -1,7 +1,7 @@
 import os, shlex
 import argparse
 
-from src.models.utils import get_hf_model, get_tokenizer
+from src.utils import get_hf_model, get_tokenizer
 from src.training.utils import load_model_wts
 
 import jax

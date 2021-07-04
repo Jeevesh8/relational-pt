@@ -14,7 +14,7 @@ from datasets import load_metric
 from src.globals import stable_config
 from src.params import config
 from src.models import pure_cpl, pure_rpl, pure_pc, pure_pr
-from src.models.utils import get_hf_model, get_tokenizer
+from src.utils import get_hf_model, get_tokenizer
 from src.training.utils import (
     load_relational_metric,
     batch_to_post_tags,

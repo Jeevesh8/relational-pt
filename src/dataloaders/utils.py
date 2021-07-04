@@ -2,7 +2,7 @@ from typing import List, Tuple
 from functools import reduce
 from collections import namedtuple
 
-from ..models.utils import get_tokenizer
+from ..utils import get_tokenizer
 from ..params import config
 from ..globals import stable_config
 
