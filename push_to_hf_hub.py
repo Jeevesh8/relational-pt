@@ -8,7 +8,7 @@ import jax
 import jax.numpy as jnp
 from flax import serialization
 
-jax.config.update('jax_platform_name', 'cpu')
+jax.config.update("jax_platform_name", "cpu")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -38,9 +38,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    
     tokenizer = get_tokenizer()
-    
+
     transformer_model = get_hf_model(len(tokenizer))
 
     params = load_model_wts(transformer_model, args.wts_file, False)
@@ -54,10 +53,10 @@ if __name__ == "__main__":
 
     params.pop("embds_params")
 
-    with open(os.path.join(args.model_id, "top_head.params"), 'wb+') as f:
+    with open(os.path.join(args.model_id, "top_head.params"), "wb+") as f:
         f.write(serialization.to_bytes(params))
-    
+
     os.chdir(args.model_id)
     os.system("git add .")
-    os.system("git commit -m \"Added additional top head params\".")
+    os.system('git commit -m "Added additional top head params".')
     os.system("git push")
