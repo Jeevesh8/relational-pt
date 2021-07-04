@@ -8,13 +8,15 @@ ft_config = {
     "pt_wts_file": None,
     "cmv_modes_dir": None,
     "n_epochs": 10,
-    "train_test_split": {"train_sz": 80,
-                         "test_sz": 20}
+    "train_test_split": {
+        "train_sz": 80,
+        "test_sz": 20
+    },
 }
 
 n_samples = 0
 for filename in os.listdir(ft_config["cmv_modes_dir"]):
-    if filename.endswith('.xml'):
+    if filename.endswith(".xml"):
         n_samples += 1
 
 ft_config["opt"] = {
@@ -23,7 +25,8 @@ ft_config["opt"] = {
     "max_grad_norm":
     1.0,  # Gradients clipped at this norm. Use "None" for no clipping
     "total_steps":
-    2 * n_samples * ft_config["train_test_split"]["train_sz"] // (ft_config["batch_size"] * stable_config["num_devices"]),
+    2 * n_samples * ft_config["train_test_split"]["train_sz"] //
+    (ft_config["batch_size"] * stable_config["num_devices"]),
     "restart_from":
     0,
     "use_schedule":
