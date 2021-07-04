@@ -56,15 +56,16 @@ pure_rpl = hk.transform(relation_prediction_loss)
 pure_pc = hk.transform(predict_components)
 pure_pr = hk.transform(predict_relations)
 
-
 ##################################  FINETUNING  #####################################
 from ..cmv_modes.configs import config as ft_config
 
 _n_classes = len(ft_config["arg_components"])
 _n_rels = len(ft_config["relations_map"])
 
+
 def ft_comp_prediction_loss(logits, lengths, label_tags):
-    return crf_layer(n_classes=_n_classes)(hk.Linear(_n_classes)(logits), lengths, label_tags)
+    return crf_layer(n_classes=_n_classes)(hk.Linear(_n_classes)(logits),
+                                           lengths, label_tags)
 
 
 def ft_relation_prediction_loss(embds, choice_mask, label_relations, max_comps,
@@ -108,7 +109,12 @@ ft_pure_rpl = hk.transform(ft_relation_prediction_loss)
 ft_pure_pc = hk.transform(ft_predict_components)
 ft_pure_pr = hk.transform(ft_predict_relations)
 
-def copy_weights(old_mat: jnp.ndarray, new_mat: jnp.ndarray, mapping: Optional[Dict[int,List[int]]]=None) -> jnp.ndarray:
+
+def copy_weights(
+    old_mat: jnp.ndarray,
+    new_mat: jnp.ndarray,
+    mapping: Optional[Dict[int, List[int]]] = None,
+) -> jnp.ndarray:
     """
     Args:
         old_mat:   A matrix of shape [old_input_dim, old_output_dim] extracted from some pretrained model.
@@ -117,33 +123,40 @@ def copy_weights(old_mat: jnp.ndarray, new_mat: jnp.ndarray, mapping: Optional[D
                    By default, for i not specified in the mapping, mean will be taken over all the j.
     Returns:
         A matrix of same shape as new_mat, with weights copied from old_mat as specified in mapping.
-    
+
     NOTE: This function combines with None indexing and jnp.squeeze to copy 1-D vectors too.
     """
-    
+
     if mapping is None:
         mapping = {}
-    
-    one_dimensional=False
-    if jnp.size(old_mat.shape)==jnp.size(new_mat.shape)==1:
-        one_dimensional=True
-        old_mat, new_mat = old_mat[None,:], new_mat[None, :]
-    
+
+    one_dimensional = False
+    if jnp.size(old_mat.shape) == jnp.size(new_mat.shape) == 1:
+        one_dimensional = True
+        old_mat, new_mat = old_mat[None, :], new_mat[None, :]
+
     old_input_dim, old_output_dim = old_mat.shape
     new_input_dim, new_output_dim = new_mat.shape
-    
-    if old_input_dim!=new_input_dim:
-        raise ValueError("The layer's between which weights are being copied are expected to have same input dimensions. Received shapes: "+
-                         str(old_mat.shape)+" and "+str(new_mat.shape))
-                        
-    _mapping = {i : list(range(old_output_dim)) for i in range(new_output_dim)}
+
+    if old_input_dim != new_input_dim:
+        raise ValueError(
+            "The layer's between which weights are being copied are expected to have same input dimensions. Received shapes: "
+            + str(old_mat.shape) + " and " + str(new_mat.shape))
+
+    _mapping = {i: list(range(old_output_dim)) for i in range(new_output_dim)}
     _mapping.update(mapping)
-    
+
     for i, mean_over in _mapping.items():
-        new_mat = jax.ops.index_update(new_mat, [list(range(new_input_dim)), i],
-                                      jnp.mean(jnp.take_along_axis(old_mat, jnp.array([mean_over]), axis=-1), axis=-1))
-    
+        new_mat = jax.ops.index_update(
+            new_mat,
+            [list(range(new_input_dim)), i],
+            jnp.mean(jnp.take_along_axis(old_mat,
+                                         jnp.array([mean_over]),
+                                         axis=-1),
+                     axis=-1),
+        )
+
     if one_dimensional:
         new_mat = jnp.squeeze(new_mat)
-    
+
     return new_mat
