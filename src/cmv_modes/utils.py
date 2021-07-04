@@ -63,9 +63,8 @@ def has_space(
     if preceeding:
         return (idx == 0 and (True if prev_str is None else prev_str[-1]
                               == " ")) or enclosing_string[idx - 1] == " "
-    else:
-        return idx == len(enclosing_string) - 1 or enclosing_string[idx +
-                                                                    1] == " "
+    
+    return idx == len(enclosing_string) - 1 or enclosing_string[idx +1] == " "
 
 
 def modified_mask_encodings(

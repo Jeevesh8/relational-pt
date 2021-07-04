@@ -9,7 +9,7 @@ from utils import convert_outputs_to_tensors, get_rel_type_idx, reencode_mask_to
 
 def get_arg_comp_lis(comp_type: str, length: int) -> List[str]:
     """Returns a list of labels for a component of comp_type of specified length."""
-    if not comp_type in ["claim", "premise"]:
+    if comp_type not in ["claim", "premise"]:
         raise ValueError("Un-supported component type: " + comp_type +
                          " Try changing 'arg_components' in config")
     comp_type = "C" if comp_type == "claim" else "P"
@@ -29,7 +29,7 @@ def get_ref_link_lis(related_to: int, first_idx: int,
     """
     try:
         refs = [config["dist_to_label"][related_to]]
-    except:
+    except KeyError:
         refs = [0]
     return refs + [
         config["dist_to_label"][i] for i in range(first_idx, last_idx - 1)
@@ -76,7 +76,7 @@ def get_tokenized_thread(
     ref_n_rel_type = {}
     comp_types = {}
 
-    tokenized_thread = [tokenizer._convert_token_to_id("<s>")]
+    tokenized_thread = [tokenizer.bos_token_id]
     for component_tup in generate_components(filename):
         component, comp_type, comp_id, refers, rel_type = component_tup
         encoding = tokenizer.encode(component)[1:-1]
@@ -91,7 +91,7 @@ def get_tokenized_thread(
             ref_n_rel_type[comp_id] = (refers, rel_type)
             comp_types[comp_id] = comp_type
         tokenized_thread += encoding
-    tokenized_thread.append(tokenizer._convert_token_to_id("</s>"))
+    tokenized_thread.append(tokenizer.eos_token_id)
 
     return (
         tokenized_thread,

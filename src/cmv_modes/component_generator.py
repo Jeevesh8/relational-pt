@@ -192,7 +192,7 @@ def generate_components(filename):
         raise AssertionError("HTML characters still remaining in XML: " +
                              str(re.findall(r"\&\#.*;", str(parsed_xml))))
 
-    user_dict = dict()
+    user_dict = {}
 
     yield (parsed_xml.find("title").get_text(), "claim", "title", None, None)
 
@@ -202,7 +202,7 @@ def generate_components(filename):
 
         try:
             contents = parsed_modified_post.find("reply").contents
-        except:
+        except AttributeError:
             contents = parsed_modified_post.find("op").contents
 
         yield (user_tag, "user_tag", None, None, None)
