@@ -1,4 +1,4 @@
-import os
+import os, warnings
 import tensorflow as tf
 from typing import Any, List, Dict, Tuple, Optional, Union
 
@@ -184,16 +184,11 @@ def get_thread_with_labels(
                         rel_type,
                     ))
                 else:
-                    raise AssertionError("Link from component: " + comp_id +
-                                         "to itself detected in: " + filename)
+                    warnings.warn("Skipping Link from component: " + comp_id +
+                                  " to itself detected in: " + filename)
             else:
-                print(
-                    "Skipping the extra link for component: ",
-                    comp_id,
-                    " to ",
-                    ref_id,
-                    " for file: ",
-                    filename,
+                warnings.warn("Skipping the extra link for component: "+comp_id+
+                              " to "+ref_id+" for file: "+filename,
                 )
 
         prev_end = end

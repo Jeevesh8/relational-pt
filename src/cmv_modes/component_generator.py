@@ -144,10 +144,10 @@ def get_components(
                         stub_parent_rel_type,
                 ):
                     yield _
-
-            for _ in get_components(part, comp_type, parent_id, parent_refers,
-                                    parent_rel_type):
-                yield _
+            else:
+                for _ in get_components(part, comp_type, parent_id, parent_refers,
+                                        parent_rel_type):
+                    yield _
 
     if str(component).strip() == "":
         yield None
@@ -183,7 +183,7 @@ def generate_components(filename):
     """
 
     with open(filename, "r") as g:
-        xml_str = g.read().replace("&#8217", " &#8217 ")
+        xml_str = g.read().replace("&#8217;", "&")
 
     xml_with_html_substituted = str(BeautifulSoup(xml_str, "lxml"))
     parsed_xml = BeautifulSoup(xml_with_html_substituted, "xml")  # Note 1.
