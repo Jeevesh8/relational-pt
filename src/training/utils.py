@@ -231,7 +231,7 @@ def load_model_wts(base_model,
     if wts_file is not None:
         with open(wts_file, "rb") as f:
             params = serialization.from_bytes(params, f.read())
-    
+
     if to_hk_flat_map:
         params["comp_predictor"] = to_immutable_dict(params["comp_predictor"])
         params["relation_predictor"] = to_immutable_dict(
