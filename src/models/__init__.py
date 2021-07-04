@@ -109,6 +109,7 @@ ft_pure_rpl = hk.transform(ft_relation_prediction_loss)
 ft_pure_pc = hk.transform(ft_predict_components)
 ft_pure_pr = hk.transform(ft_predict_relations)
 
+
 def copy_weights(
     old_mat: jnp.ndarray,
     new_mat: jnp.ndarray,
@@ -125,10 +126,10 @@ def copy_weights(
 
     NOTE: This function combines with None indexing and jnp.squeeze to copy 1-D vectors too.
     """
-    
+
     if mapping is None:
         mapping = {}
-    
+
     one_dimensional = False
     if jnp.size(old_mat.shape) == jnp.size(new_mat.shape) == 1:
         one_dimensional = True
