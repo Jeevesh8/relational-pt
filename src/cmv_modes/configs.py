@@ -1,3 +1,5 @@
+from frozendict import frozendict
+
 from ..models.utils import get_tokenizer
 
 tokenizer = get_tokenizer()
@@ -49,3 +51,5 @@ config["pad_for"] = {
     config["arg_components"]["other"],  # len(config['arg_components']),
     "refers_to_and_type": 0,  # len(config['dist_to_label'])+2,
 }
+
+config = frozendict(config)

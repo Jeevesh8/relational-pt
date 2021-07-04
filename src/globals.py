@@ -1,3 +1,5 @@
+from frozendict import frozendict
+
 stable_config = {
     "max_len": 4096,
     "max_users": 128,
@@ -6,3 +8,5 @@ stable_config = {
     "checkpoint": "google/bigbird-roberta-base",
     "embed_dim": 768,
 }
+
+stable_config = frozendict(stable_config)

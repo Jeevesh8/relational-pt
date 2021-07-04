@@ -1,3 +1,5 @@
+from frozendict import frozendict
+
 from .globals import stable_config
 from .models.utils import get_tokenizer
 
@@ -48,4 +50,8 @@ config["opt"] = {
     None,  # Use "None" for no weight decay; adamw will be used if it is not None.
 }
 
+
 tokenizer = get_tokenizer()
+
+config = frozendict(config)
+
