@@ -91,14 +91,7 @@ class relational_model(hk.Module):
         )
 
         log_energies = jax.ops.index_update(
-            log_energies,
-            (
-                0,
-                jnp.array(list(range(self.max_comps))),
-                jnp.array(list(range(self.n_rels))),
-            ),
-            -jnp.inf,
-        )
+            log_energies, (0,), -jnp.inf,)
 
         available_from_to = jnp.logical_and(jnp.expand_dims(pad_mask, axis=-1),
                                             pad_mask)

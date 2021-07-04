@@ -225,13 +225,13 @@ def load_model_wts(base_model,
     Returns:
         The params dict with the same key value pairs as src.training.utils.get_params_dict()
     """
-    target = get_params_dict(jax.random.PRNGKey(12),
+    params = get_params_dict(jax.random.PRNGKey(12),
                              base_model,
                              all_dicts=True)
     if wts_file is not None:
         with open(wts_file, "rb") as f:
-            params = serialization.from_bytes(target, f.read())
-
+            params = serialization.from_bytes(params, f.read())
+    
     if to_hk_flat_map:
         params["comp_predictor"] = to_immutable_dict(params["comp_predictor"])
         params["relation_predictor"] = to_immutable_dict(

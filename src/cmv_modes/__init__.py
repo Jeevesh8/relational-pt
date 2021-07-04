@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from .tokenize_components import get_model_inputs
 from ..params import config
 from ..globals import stable_config
-from configs import config as arg_mining_config
+from .configs import config as arg_mining_config
 
 cmv_modes_data = namedtuple(
     "cmv_modes_data",
@@ -123,7 +123,7 @@ def load_dataset(
         os.system(shlex.quote("git clone https://github.com/chridey/change-my-view-modes"))
         cmv_modes_dir = os.path.join(os.getcwd(), "change-my-view-modes/v2.0/")
 
-    splits = get_op_wise_split(os.path.list.dir(cmv_modes_dir))
+    splits = get_op_wise_split(os.path.list_dir(cmv_modes_dir))
 
     op_wise_splits_lis = splits.values()
     if shuffle:

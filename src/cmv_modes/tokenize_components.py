@@ -3,8 +3,8 @@ import tensorflow as tf
 from typing import Any, List, Dict, Tuple, Optional, Union
 
 from .configs import config, tokenizer
-from component_generator import generate_components
-from utils import convert_outputs_to_tensors, get_rel_type_idx, reencode_mask_tokens
+from .component_generator import generate_components
+from .utils import convert_outputs_to_tensors, get_rel_type_idx, reencode_mask_tokens
 
 
 def get_arg_comp_lis(comp_type: str, length: int) -> List[str]:
