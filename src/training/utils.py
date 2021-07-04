@@ -123,17 +123,20 @@ def load_relational_metric(n_processes=None):
     return relation_match_metric(n_processes)
 
 
-def convert_ids_to_tags(lis, idx, tags_dict: Dict[str, int]=config["post_tags"]):
-    int_to_tags = {v : k for k, v in tags_dict.items()}
+def convert_ids_to_tags(lis,
+                        idx,
+                        tags_dict: Dict[str, int] = config["post_tags"]):
+    int_to_tags = {v: k for k, v in tags_dict.items()}
     return [int_to_tags[lis[i]] for i in range(0, idx)]
 
 
 def batch_to_post_tags(
-        references: jnp.ndarray,
-        predictions: jnp.ndarray,
-        tags_dict: Dict[str, int] = config["post_tags"],
-        seq_lens: Optional[jnp.ndarray] = None,
-        pad_id: int = config["pad_for"]["post_tags"],) -> Tuple[List[List[str]], List[List[str]]]:
+    references: jnp.ndarray,
+    predictions: jnp.ndarray,
+    tags_dict: Dict[str, int] = config["post_tags"],
+    seq_lens: Optional[jnp.ndarray] = None,
+    pad_id: int = config["pad_for"]["post_tags"],
+) -> Tuple[List[List[str]], List[List[str]]]:
     """
     Converts the post tags predicted by the model, and those output by the
     dataset iterator to actual labels like ['B-.', 'I-.'].
@@ -149,16 +152,17 @@ def batch_to_post_tags(
         Lists of references and predictions converted to string tags for each sample sequence in the batch.
     """
     if seq_lens is None:
-        seq_lens = jnp.reshape( jnp.sum(references != pad_id, axis=-1), (-1) )
+        seq_lens = jnp.reshape(jnp.sum(references != pad_id, axis=-1), (-1))
     seq_lens = seq_lens.tolist()
-    
-    tags_dict = [tags_dict]*len(seq_lens)
-    
+
+    tags_dict = [tags_dict] * len(seq_lens)
+
     with Pool(sum(seq_lens) // 10000 + 1) as p:
-        predictions_lis = p.starmap(convert_ids_to_tags,
-                                    zip(predictions.tolist(), seq_lens, tags_dict))
-        references_lis = p.starmap(convert_ids_to_tags,
-                                    zip(references.tolist(), seq_lens, tags_dict))
+        predictions_lis = p.starmap(
+            convert_ids_to_tags, zip(predictions.tolist(), seq_lens,
+                                     tags_dict))
+        references_lis = p.starmap(
+            convert_ids_to_tags, zip(references.tolist(), seq_lens, tags_dict))
 
     return references_lis, predictions_lis
 
@@ -210,7 +214,9 @@ def get_params_dict(key, base_model, all_dicts: bool = False) -> dict:
     return params
 
 
-def load_model_wts(base_model, wts_file:Optional[str] = None, to_hk_flat_map: bool = True) -> dict:
+def load_model_wts(base_model,
+                   wts_file: Optional[str] = None,
+                   to_hk_flat_map: bool = True) -> dict:
     """Loads wts from a binary file. Assumes wts are of the form output by src.training.utils.get_params_dict().
     Args:
         wts_file:       The file havnig serialized bytes corresponding to the weights to be loaded.

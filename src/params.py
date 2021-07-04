@@ -48,4 +48,4 @@ config["opt"] = {
     None,  # Use "None" for no weight decay; adamw will be used if it is not None.
 }
 
-tokenizer = get_tokenizer()    
+tokenizer = get_tokenizer()

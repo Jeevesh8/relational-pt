@@ -264,6 +264,7 @@ if __name__ == "__main__":
 
             f.write(
                 serialization.to_bytes(
-                    jax.tree_util.tree_map(lambda x: jnp.squeeze(jnp.take(x, [0], axis=0)),
-                                           to_write)))
+                    jax.tree_util.tree_map(
+                        lambda x: jnp.squeeze(jnp.take(x, [0], axis=0)),
+                        to_write)))
             print("Another Train Epoch. WEIGHTS STORED AT:", write_file)

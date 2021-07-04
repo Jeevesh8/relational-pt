@@ -10,14 +10,16 @@ from utils import convert_outputs_to_tensors, get_rel_type_idx, reencode_mask_to
 def get_arg_comp_lis(comp_type: str, length: int) -> List[str]:
     """Returns a list of labels for a component of comp_type of specified length."""
     if not comp_type in ["claim", "premise"]:
-        raise ValueError("Un-supported component type: " + comp_type + " Try changing 'arg_components' in config")
+        raise ValueError("Un-supported component type: " + comp_type +
+                         " Try changing 'arg_components' in config")
     comp_type = "C" if comp_type == "claim" else "P"
     begin = config["arg_components"]["B-" + comp_type]
     intermediate = config["arg_components"]["I-" + comp_type]
     return [begin] + [intermediate] * (length - 1)
 
 
-def get_ref_link_lis(related_to: int, first_idx: int, last_idx: int) -> List[int]:
+def get_ref_link_lis(related_to: int, first_idx: int,
+                     last_idx: int) -> List[int]:
     """To be used for getting token ids to link the component between [first_index, last_index) to the component at distance related_to.
     Every token except the first, refers to its previous token.
     Args:
@@ -34,7 +36,8 @@ def get_ref_link_lis(related_to: int, first_idx: int, last_idx: int) -> List[int
     ]
 
 
-def get_global_attention(tokenized_thread: List[int], user_token_indices: List[int]) -> List[int]:
+def get_global_attention(tokenized_thread: List[int],
+                         user_token_indices: List[int]) -> List[int]:
     global_attention = [0] * len(tokenized_thread)
     for i, elem in enumerate(tokenized_thread):
         if elem in user_token_indices:
@@ -98,7 +101,9 @@ def get_tokenized_thread(
         comp_types,
     )
 
-def check_component_indices(prev_end: int, begin: int, end: int, tokenized_thread: List[Any]):
+
+def check_component_indices(prev_end: int, begin: int, end: int,
+                            tokenized_thread: List[Any]):
     """Raises Error if two adjacent components are overlapping, or the boundaries
     of if the components lie outside the boundaries of tokenized_thread.
     Args:
@@ -116,11 +121,15 @@ def check_component_indices(prev_end: int, begin: int, end: int, tokenized_threa
 
     if not (0 <= begin <= end < len(tokenized_thread)
             or 0 <= prev_end + 1 <= begin <= end < len(tokenized_thread)):
-        raise AssertionError("Begin, and end are not correct." +
-                             str(begin) + ", " + str(end))
+        raise AssertionError("Begin, and end are not correct." + str(begin) +
+                             ", " + str(end))
+
 
 @convert_outputs_to_tensors(dtype=tf.int32)
-def get_thread_with_labels(filename, mask_tokens: Optional[List[str]] = None) -> Tuple[List[int], List[int], List[List[int]]]:
+def get_thread_with_labels(
+    filename,
+    mask_tokens: Optional[List[str]] = None
+) -> Tuple[List[int], List[int], List[List[int]]]:
     """Returns the tokenized threads along with all the proper labels.
     Args:
         filename:       The xml whose data is to be tokenized.
@@ -163,12 +172,12 @@ def get_thread_with_labels(filename, mask_tokens: Optional[List[str]] = None) ->
         for j, ref_id in enumerate(str(ref).split("_")):
             if j == 0:
                 if ref_id == "None":
-                    
+
                     refer_to_and_type.append(
                         (begin_pos_lis.index(begin) + 1, 0, rel_type))
-                
+
                 elif comp_id != ref_id:
-                    
+
                     refer_to_and_type.append((
                         begin_pos_lis.index(begin) + 1,
                         begin_pos_lis.index(begin_positions[ref_id]) + 1,
@@ -180,16 +189,23 @@ def get_thread_with_labels(filename, mask_tokens: Optional[List[str]] = None) ->
             else:
                 print(
                     "Skipping the extra link for component: ",
-                    comp_id, " to ", ref_id, " for file: ", filename,)
+                    comp_id,
+                    " to ",
+                    ref_id,
+                    " for file: ",
+                    filename,
+                )
 
         prev_end = end
 
-    if (len(tokenized_thread) != len(comp_type_labels)):
+    if len(tokenized_thread) != len(comp_type_labels):
         raise AssertionError("Incorrect Dataset Loading !!")
 
-    return (tokenized_thread,
-            comp_type_labels,
-            refer_to_and_type,)
+    return (
+        tokenized_thread,
+        comp_type_labels,
+        refer_to_and_type,
+    )
 
 
 def get_model_inputs(file_lis: Union[List[str], str]):
