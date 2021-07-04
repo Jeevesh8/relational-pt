@@ -1,3 +1,5 @@
+from frozendict import frozendict
+
 from .globals import stable_config
 from .models.utils import get_tokenizer
 
@@ -49,3 +51,5 @@ config["opt"] = {
 }
 
 tokenizer = get_tokenizer()    
+
+config = frozendict(config)
