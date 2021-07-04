@@ -6,6 +6,8 @@ from flax import traverse_util
 
 from ..params import config
 
+if "opt" not in config:
+    from ..arg_mining_ft.params import ft_config as config
 
 def make_lr_schedule(warmup_percentage, total_steps, restart_from=0):
     def lr_schedule(step):

@@ -200,8 +200,7 @@ if __name__ == "__main__":
     key = jax.random.split(key, stable_config["num_devices"])
 
     train_dataset, _, test_dataset = load_dataset(ft_config["cmv_modes_dir"],
-                                                  train_sz=80,
-                                                  test_sz=20)
+                                                  **ft_config["train_test_split"])
 
     num_iters = 0
     loop_state = flax.jax_utils.replicate(init_train_state)
