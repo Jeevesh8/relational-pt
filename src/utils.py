@@ -4,7 +4,6 @@ from transformers import AutoTokenizer, FlaxAutoModel
 
 from globals import stable_config
 
-
 sp_tokens = ["[URL]", "[STARTQ]", "[ENDQ]", "[UNU]"] + [
     "[USER" + str(i) + "]" for i in range(stable_config["max_users"])
 ]
