@@ -28,8 +28,7 @@ class tree_crf(hk.Module):
         self.prior = prior
         if self.prior is not None:
             raise NotImplementedError(
-                "The prior functionality will be implemented in future."
-            )
+                "The prior functionality will be implemented in future.")
 
     @staticmethod
     def _mst(log_energies: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
@@ -103,9 +102,8 @@ class tree_crf(hk.Module):
         return mst_energy, edges
         """  # FOR-LOOP equivalent
         for _ in range(M):
-            max_index = jnp.unravel_index(
-                jnp.argmax(log_energies), jnp.shape(log_energies)
-            )
+            max_index = jnp.unravel_index(jnp.argmax(log_energies),
+                                          jnp.shape(log_energies))
             max_energy = log_energies[max_index]
             updatable_sample = jnp.logical_not(jnp.isneginf(max_energy))
             mst_energy += jnp.where(updatable_sample, max_energy, 0.0)
@@ -118,8 +116,10 @@ class tree_crf(hk.Module):
             edges.append(max_link)
 
             link_from, link_to, unused_rel_type = max_index
-            from_partition = jnp.where(partitions[link_from, :] == 1, jnp.arange(M), -1)
-            to_partition = jnp.where(partitions[link_to, :] == 1, jnp.arange(M), -1)
+            from_partition = jnp.where(partitions[link_from, :] == 1,
+                                       jnp.arange(M), -1)
+            to_partition = jnp.where(partitions[link_to, :] == 1,
+                                     jnp.arange(M), -1)
 
             log_energies = add_garbage_dims(log_energies)
             log_energies = jax.ops.index_update(
@@ -140,18 +140,20 @@ class tree_crf(hk.Module):
             )
             log_energies = remove_garbage_dims(log_energies)
 
-            temp = jnp.logical_or(partitions[link_from, :], partitions[link_to, :])
+            temp = jnp.logical_or(partitions[link_from, :],
+                                  partitions[link_to, :])
             temp_idx = jnp.where(temp, jnp.arange(M), -1)
 
             partitions = add_garbage_dims(partitions)
             partitions = jax.ops.index_update(
-                partitions, (jnp.expand_dims(temp_idx, axis=-1), jnp.arange(M)), temp
-            )
+                partitions,
+                (jnp.expand_dims(temp_idx, axis=-1), jnp.arange(M)), temp)
             partitions = remove_garbage_dims(partitions)
 
         return mst_energy, jnp.stack(edges)
 
-    def mst(self, log_energies: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
+    def mst(self,
+            log_energies: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
         """Finds the maximal spanning tree and its score.
         Args:
             log_energies:   A tensor of size [batch_size, M, M, n_rel_types+1] where M = max{1+ (n_comps in i-th sample of batch)}, of the energies of various
@@ -167,7 +169,8 @@ class tree_crf(hk.Module):
         return jax.vmap(self._mst)(log_energies)
 
     @staticmethod
-    def _score_tree(log_energies: jnp.ndarray, tree: jnp.ndarray) -> jnp.ndarray:
+    def _score_tree(log_energies: jnp.ndarray,
+                    tree: jnp.ndarray) -> jnp.ndarray:
         """Finds the score of a label tree under the log_energies predicted by some model.
         See self.score_tree() for detailed documentation.
         """
@@ -186,7 +189,8 @@ class tree_crf(hk.Module):
         """
         return score
 
-    def score_tree(self, log_energies: jnp.ndarray, tree: jnp.ndarray) -> jnp.ndarray:
+    def score_tree(self, log_energies: jnp.ndarray,
+                   tree: jnp.ndarray) -> jnp.ndarray:
         """Calculates the log energies of a given batch of trees.
         Args:
             log_energies:   same, as in self.mst()
@@ -196,9 +200,8 @@ class tree_crf(hk.Module):
         """
         return jax.vmap(self._score_tree)(log_energies, tree)
 
-    def disc_loss(
-        self, log_energies: jnp.ndarray, label_tree: jnp.ndarray
-    ) -> jnp.ndarray:
+    def disc_loss(self, log_energies: jnp.ndarray,
+                  label_tree: jnp.ndarray) -> jnp.ndarray:
         """Calculates average loss of a batch of samples.
         Args:
             log_energies:   same, as in self.mst()

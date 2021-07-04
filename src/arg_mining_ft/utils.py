@@ -28,9 +28,7 @@ def get_transition_mat(
 
     rng = np.random.default_rng(12345)
 
-    random_transition_mat = (rng.uniform(
-        size=(5, 5),
-    ) + 0.05)
+    random_transition_mat = (rng.uniform(size=(5, 5), ) + 0.05)
     ac_dict = data_config["arg_components"]
 
     random_transition_mat[[ac_dict["I-C"], ac_dict["other"]],
