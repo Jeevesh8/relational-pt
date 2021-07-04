@@ -26,7 +26,8 @@ config = {
     "valid_files": ["../subtrees-text-4096/valid.txt"],
     "save_model_file":
     "../relational_pretrained.wts",
-    "arg_mining_ft":  False,
+    "arg_mining_ft":
+    False,
 }
 
 n_samples = 0

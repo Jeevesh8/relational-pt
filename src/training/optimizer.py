@@ -9,6 +9,7 @@ from ..params import config
 if "opt" not in config:
     from ..arg_mining_ft.params import ft_config as config
 
+
 def make_lr_schedule(warmup_percentage, total_steps, restart_from=0):
     def lr_schedule(step):
         percent_complete = (step + restart_from) / total_steps
