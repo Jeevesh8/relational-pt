@@ -41,8 +41,8 @@ config = {
     },
     "omit_filenames":
     True,
-
-    "max_len": 4096,
+    "max_len":
+    4096,
 }
 
 config["pad_for"] = {
