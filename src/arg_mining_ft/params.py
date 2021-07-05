@@ -26,7 +26,7 @@ ft_config["opt"] = {
     1.0,  # Gradients clipped at this norm. Use "None" for no clipping
     "total_steps":
     2 * n_samples * ft_config["train_test_split"]["train_sz"] //
-    (ft_config["batch_size"] * stable_config["num_devices"]*100),
+    (ft_config["batch_size"] * stable_config["num_devices"] * 100),
     "restart_from":
     0,
     "use_schedule":
