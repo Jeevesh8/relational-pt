@@ -7,7 +7,7 @@ ft_config = {
     "batch_size": 1,
     "pt_wts_file": None,
     "cmv_modes_dir": "./change-my-view-modes/v2.0/",
-    "n_epochs": 10,
+    "n_epochs": 20,
     "train_test_split": {
         "train_sz": 80,
         "test_sz": 20
