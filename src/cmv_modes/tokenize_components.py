@@ -86,8 +86,8 @@ def get_tokenized_thread(
 
         if len(encoding)+len(tokenized_thread)>=config["max_len"]-1:
             for comp_id, (refers, rel_type) in ref_n_rel_type.items():
-                final_refs = [ref for ref in refers.split('_') if ref in begin_positions]
-                ref_n_rel_type[comp_id] = ("None", "None") if final_refs==[] else ('_'.join(final_refs), rel_type)
+                final_refs = [ref for ref in str(refers).split('_') if ref in begin_positions]
+                ref_n_rel_type[comp_id] = (None, None) if refers is None else ('_'.join(final_refs), rel_type)
             break
 
         if mask_tokens is not None:
