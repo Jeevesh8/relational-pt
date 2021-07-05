@@ -7,4 +7,5 @@ flax
 optax
 datasets
 seqeval
+bs4
 lxml
