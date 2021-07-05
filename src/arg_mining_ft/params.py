@@ -1,4 +1,4 @@
-import os
+import os, glob
 
 from ..globals import stable_config
 from flax.core.frozen_dict import freeze
@@ -15,7 +15,7 @@ ft_config = {
 }
 
 n_samples = 0
-for filename in os.listdir(ft_config["cmv_modes_dir"]):
+for filename in glob.glob(os.path.join(ft_config["cmv_modes_dir"], "*/*")):
     if filename.endswith(".xml"):
         n_samples += 1
 
@@ -26,7 +26,7 @@ ft_config["opt"] = {
     1.0,  # Gradients clipped at this norm. Use "None" for no clipping
     "total_steps":
     2 * n_samples * ft_config["train_test_split"]["train_sz"] //
-    (ft_config["batch_size"] * stable_config["num_devices"]),
+    (ft_config["batch_size"] * stable_config["num_devices"]*100),
     "restart_from":
     0,
     "use_schedule":
