@@ -187,9 +187,9 @@ def get_thread_with_labels(
                     warnings.warn("Skipping Link from component: " + comp_id +
                                   " to itself detected in: " + filename)
             else:
-                warnings.warn("Skipping the extra link for component: "+comp_id+
-                              " to "+ref_id+" for file: "+filename,
-                )
+                warnings.warn(
+                    "Skipping the extra link for component: " + comp_id +
+                    " to " + ref_id + " for file: " + filename, )
 
         prev_end = end
 
