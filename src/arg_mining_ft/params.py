@@ -6,7 +6,7 @@ from flax.core.frozen_dict import freeze
 ft_config = {
     "batch_size": 1,
     "pt_wts_file": None,
-    "cmv_modes_dir": "../change-my-view-modes/v2.0/",
+    "cmv_modes_dir": "./change-my-view-modes/v2.0/",
     "n_epochs": 10,
     "train_test_split": {
         "train_sz": 80,
