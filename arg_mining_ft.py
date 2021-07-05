@@ -211,7 +211,7 @@ if __name__ == "__main__":
         "rel_pred_loss": jnp.array([0.0])
     }
 
-    log_loss_n_iters = 50
+    log_loss_n_iters = 20
 
     for epoch in range(ft_config["n_epochs"]):
 

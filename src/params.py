@@ -21,7 +21,7 @@ config = {
         "I": i + 1
     } for i in range(1, stable_config["max_users"] * 2, 2)],
     "n_epochs":
-    5,
+    15,
     "train_files": ["../subtrees-text-4096/train.txt"],
     "valid_files": ["../subtrees-text-4096/valid.txt"],
     "save_model_file":
