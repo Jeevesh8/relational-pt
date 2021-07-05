@@ -77,11 +77,19 @@ def get_tokenized_thread(
     comp_types = {}
 
     tokenized_thread = [tokenizer.bos_token_id]
+    prune_connections = False
     for component_tup in generate_components(filename):
         component, comp_type, comp_id, refers, rel_type = component_tup
         encoding = tokenizer.encode(component)[1:-1]
         if len(encoding) == 0:
             print("Empty component: ", encoding, component)
+
+        if len(encoding)+len(tokenizer_thread)>=config["max_len"]:
+            for comp_id, (refers, rel_type) in ref_n_rel_type.items():
+                final_refs = [ref for ref in refers.split('_') if ref in begin_positions]
+                ref_n_rel_type[comp_id] = ("None", "None") if final_refs==[] else ('_'.join(final_refs), rel_type)
+            break
+
         if mask_tokens is not None:
             encoding = reencode_mask_tokens(encoding, tokenizer,
                                             mask_tokens)[1]
