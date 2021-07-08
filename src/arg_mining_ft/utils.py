@@ -61,7 +61,10 @@ def get_transition_mat(
     random_transition_mat[ac_dict["I-P"],
                           ac_dict["I-P"]] = pt_transition_mat[1, 1]
 
-    return jnp.array(random_transition_mat)
+    print("Initialized Transition matrix(from-to):")
+    print(random_transition_mat)
+    
+    return jnp.transpose(jnp.array(random_transition_mat))
 
 
 def get_top_head_params(pt_params):
