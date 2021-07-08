@@ -6,7 +6,7 @@ stable_config = {
     "max_comps": 128,  # Max. in dataset=103
     "num_devices": 8,
     "checkpoint":
-    "Jeevesh8/bigbird-relational-pt",  # "google/bigbird-roberta-base",
+    "google/bigbird-roberta-base",
     "embed_dim": 768,
 }
 

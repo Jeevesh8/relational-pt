@@ -182,7 +182,7 @@ if __name__ == "__main__":
     params = get_params_dict(subkey,
                              transformer_model,
                              ft_config["pt_wts_file"],
-                             use_pt_for_heads=True)
+                             use_pt_for_heads=False)
 
     opt = get_adam_opt()
 
