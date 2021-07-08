@@ -71,13 +71,20 @@ def get_tokenized_thread(
         end_positions: A dictionary mapping the ids of various argumentative components to their ending index+1 in tokenized_thread.
         comp_types: A dictionary mapping the ids of various argumentative components to their types ('claim'/'premise')
     """
+    
+    def adjust_ref_rel_type(ref_n_rel_type, begin_positions):
+        """Removes any links in ref_n_rel_type which point to some component outside of those in
+        the keys of begin_positions."""
+        for comp_id, (refers, rel_type) in ref_n_rel_type.items():
+            final_refs = [ref for ref in str(refers).split('_') if ref in begin_positions]
+            ref_n_rel_type[comp_id] = (None, None) if refers is None else ('_'.join(final_refs), rel_type)
+    
     begin_positions = {}
     end_positions = {}
     ref_n_rel_type = {}
     comp_types = {}
 
     tokenized_thread = [tokenizer.bos_token_id]
-    prune_connections = False
     for component_tup in generate_components(filename):
         component, comp_type, comp_id, refers, rel_type = component_tup
         encoding = tokenizer.encode(component)[1:-1]
@@ -85,9 +92,7 @@ def get_tokenized_thread(
             print("Empty component: ", encoding, component)
 
         if len(encoding)+len(tokenized_thread)>=config["max_len"]-1:
-            for comp_id, (refers, rel_type) in ref_n_rel_type.items():
-                final_refs = [ref for ref in str(refers).split('_') if ref in begin_positions]
-                ref_n_rel_type[comp_id] = (None, None) if refers is None else ('_'.join(final_refs), rel_type)
+            adjust_ref_rel_type(ref_n_rel_type, begin_positions)
             break
 
         if mask_tokens is not None:
@@ -99,6 +104,11 @@ def get_tokenized_thread(
             ref_n_rel_type[comp_id] = (refers, rel_type)
             comp_types[comp_id] = comp_type
         tokenized_thread += encoding
+
+        if len(begin_positions)>=config["max_comps"]-1:
+            adjust_ref_rel_type(ref_n_rel_type, begin_positions)
+            break
+        
     tokenized_thread.append(tokenizer.eos_token_id)
 
     return (

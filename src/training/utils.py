@@ -219,8 +219,9 @@ def load_model_wts(base_model,
                    to_hk_flat_map: bool = True) -> dict:
     """Loads wts from a binary file. Assumes wts are of the form output by src.training.utils.get_params_dict().
     Args:
-        wts_file:       The file havnig serialized bytes corresponding to the weights to be loaded.
-        base_model:     The base HF model whose weights are stored in wts_file. Loaded from HF
+        base_model:     The base HF model whose weights are stored in wts_file, as loaded from HF. 
+        wts_file:       The file havnig serialized bytes corresponding to the weights to be loaded. Random weights 
+                        are loaded(for heads) if this is None. Base model's weights are copied as it is, if wts_file is None.
         to_hk_flat_map: Whether to convert wts of haiku modules to hk._src.data_structures.FlatMap or not.
     Returns:
         The params dict with the same key value pairs as src.training.utils.get_params_dict()
@@ -228,6 +229,7 @@ def load_model_wts(base_model,
     params = get_params_dict(jax.random.PRNGKey(12),
                              base_model,
                              all_dicts=True)
+    
     if wts_file is not None:
         with open(wts_file, "rb") as f:
             params = serialization.from_bytes(params, f.read())
