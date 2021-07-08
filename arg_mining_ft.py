@@ -176,7 +176,7 @@ if __name__ == "__main__":
 
     transformer_model = get_hf_model(len(tokenizer),
                                      token_types=len(
-                                     data_config["arg_components"]))
+                                         data_config["arg_components"]))
 
     key, subkey = jax.random.split(key)
     params = get_params_dict(subkey,
