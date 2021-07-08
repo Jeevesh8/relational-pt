@@ -63,8 +63,9 @@ def get_transition_mat(
 
     return jnp.array(random_transition_mat)
 
+
 def get_top_head_params(pt_params):
-    """Loads and returns weights of top heads from the HuggingFace cache directory corresponding to the model 
+    """Loads and returns weights of top heads from the HuggingFace cache directory corresponding to the model
     specified in stable_config["checkpoint"].
     Args:
         pt_params:  A params dict which must have "comp_predictor" and "relation_predictor" keys,
@@ -73,20 +74,29 @@ def get_top_head_params(pt_params):
         A dictionary with keys "comp_predictor" and "relation_predictor" having weights that can be used directly
         with the corresponding haiku modules.
     """
-    archive_file = hf_bucket_url(stable_config["checkpoint"],
-                                    filename="top_head.params",
-                                    use_cdn=True,)
-                                
+    archive_file = hf_bucket_url(
+        stable_config["checkpoint"],
+        filename="top_head.params",
+        use_cdn=True,
+    )
+
     resolved_archive_file = cached_path(archive_file)
-    
-    with open(resolved_archive_file, 'rb') as f:
-        top_head_params = { "comp_predictor": to_mutable_dict(pt_params["comp_predictor"]), 
-                            "relation_predictor": to_mutable_dict(pt_params["comp_predictor"])}
+
+    with open(resolved_archive_file, "rb") as f:
+        top_head_params = {
+            "comp_predictor": to_mutable_dict(pt_params["comp_predictor"]),
+            "relation_predictor": to_mutable_dict(pt_params["comp_predictor"]),
+        }
         top_head_params = serialization.from_bytes(top_head_params, f.read())
-    
-    return {"comp_predictor": to_immutable_dict(top_head_params["comp_predictor"]),
-            "relation_predictor" : to_immutable_dict(top_head_params["relation_predictor"])}
-    
+
+    return {
+        "comp_predictor":
+        to_immutable_dict(top_head_params["comp_predictor"]),
+        "relation_predictor":
+        to_immutable_dict(top_head_params["relation_predictor"]),
+    }
+
+
 def get_params_dict(key: jnp.ndarray,
                     base_model,
                     pt_wts_file: str = None,
@@ -95,7 +105,7 @@ def get_params_dict(key: jnp.ndarray,
     Args:
         key:                For random weight.
         base_model:         A HF model instance which is same as the one used pre-training.
-        pt_wts_file:        File having pre-trained weights. Tries to find top heads' params in base_model's cache directory, 
+        pt_wts_file:        File having pre-trained weights. Tries to find top heads' params in base_model's cache directory,
                             if pt_wts_file is None and use_pt_for_heads is True.
         use_pt_for_heads:   A boolean indicating whether to copy weights for the relation/component prediction heads
                             from the pretrained model.
@@ -104,13 +114,13 @@ def get_params_dict(key: jnp.ndarray,
         Has same keys structure as the params returned by src.training.utils.get_params_dict()
     """
     ft_params = {}
-    
+
     pt_params = load_model_wts(base_model, pt_wts_file)
-    
+
     if use_pt_for_heads and pt_wts_file is None:
         top_head_params = get_top_head_params(pt_params)
         pt_params.update(top_head_params)
-    
+
     sample_logits, sample_lengths, sample_comp_labels, sample_relations = get_samples(
         ft_config["batch_size"],
         stable_config["max_len"],

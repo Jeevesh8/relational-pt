@@ -30,7 +30,7 @@ def get_hf_model(tokenizer_len: int,
 
     original_embeds = model.params["embeddings"]["word_embeddings"][
         "embedding"]
-    
+
     n_words, embed_dim = original_embeds.shape
     if tokenizer_len > n_words:
         key, subkey = jax.random.split(key)
@@ -45,7 +45,7 @@ def get_hf_model(tokenizer_len: int,
 
     original_embeds = model.params["embeddings"]["token_type_embeddings"][
         "embedding"]
-    
+
     n_token_types, embed_dim = original_embeds.shape
     if token_types > n_token_types:
         key, subkey = jax.random.split(key)
