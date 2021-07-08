@@ -84,7 +84,8 @@ def get_top_head_params(pt_params):
     with open(resolved_archive_file, "rb") as f:
         top_head_params = {
             "comp_predictor": to_mutable_dict(pt_params["comp_predictor"]),
-            "relation_predictor": to_mutable_dict(pt_params["relation_predictor"]),
+            "relation_predictor":
+            to_mutable_dict(pt_params["relation_predictor"]),
         }
         top_head_params = serialization.from_bytes(top_head_params, f.read())
 
@@ -139,20 +140,27 @@ def get_params_dict(key: jnp.ndarray,
     ft_params["relation_predictor"] = ft_pure_rpl.init(subkey, sample_logits,
                                                        sample_comp_labels == 0,
                                                        sample_relations)
-    
-    if use_pt_for_heads:
-        ft_params["comp_predictor"]["linear"] = jax.tree_util.tree_multimap(copy_weights, 
-                                                                            to_mutable_dict(pt_params["comp_predictor"]["linear"]),
-                                                                            ft_params["comp_predictor"]["linear"],)
 
-        ft_params["comp_predictor"]["crf_layer"]["transition_matrix"] = get_transition_mat(
-            pt_params["comp_predictor"]["crf_layer"]["transition_matrix"])
+    if use_pt_for_heads:
+        ft_params["comp_predictor"]["linear"] = jax.tree_util.tree_multimap(
+            copy_weights,
+            to_mutable_dict(pt_params["comp_predictor"]["linear"]),
+            ft_params["comp_predictor"]["linear"],
+        )
+
+        ft_params["comp_predictor"]["crf_layer"][
+            "transition_matrix"] = get_transition_mat(
+                pt_params["comp_predictor"]["crf_layer"]["transition_matrix"])
 
         ft_params["relation_predictor"] = jax.tree_util.tree_multimap(
-            copy_weights, pt_params["relation_predictor"], ft_params["relation_predictor"],)
+            copy_weights,
+            pt_params["relation_predictor"],
+            ft_params["relation_predictor"],
+        )
 
     else:
-        ft_params["comp_predictor"]["crf_layer"]["transition_matrix"] = get_transition_mat()
+        ft_params["comp_predictor"]["crf_layer"][
+            "transition_matrix"] = get_transition_mat()
 
     ft_params["comp_predictor"] = to_immutable_dict(
         ft_params["comp_predictor"])
