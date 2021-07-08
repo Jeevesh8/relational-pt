@@ -43,8 +43,12 @@ config = {
     True,
     "max_len":
     4096,
+    
     "max_comps":
-    128,
+    2000,
+
+    "add_global_attn":
+    True
 }
 
 config["pad_for"] = {

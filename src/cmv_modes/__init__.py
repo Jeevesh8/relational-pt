@@ -137,7 +137,6 @@ def _batch_examples(dataset: tf.data.Dataset, batch_size: int, max_length: int, 
           window_size=None,
           window_size_func=window_size_fn)).prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
-
 def get_dataset(file_list: List[str]):
     def callable_gen():
         nonlocal file_list
@@ -258,3 +257,16 @@ def load_dataset(
                         test_dataset.as_numpy_iterator())
 
     return train_dataset, valid_dataset, test_dataset
+
+def get_pad_mask(batch, dtype=tf.float32):
+    """Returns a mask for the tokenized threads in batch 
+    with 0 where there is pad token, 1 elsewhere."""
+    return tf.cast(batch.tokenized_threads!=config["pad_for"]["tokenized_thread"], dtype=dtype)
+
+def get_user_tokens_mask(batch, user_token_ids, dtype=tf.float32):
+    """Returns a mask for the tokenized_threads in batch
+    with 1 where a user token's id is there, 0 elsewhere."""
+    user_tokens_mask = tf.zeros_like(batch.tokenized_threads)
+    for user_token_id in user_token_ids:
+        user_tokens_mask = tf.math.logical_or(batch.tokenized_threads==user_token_id, user_tokens_mask)
+    return tf.cast(user_tokens_mask, dtype=dtype)
