@@ -71,7 +71,7 @@ def _create_min_max_boundaries(max_length: int,
     return buckets_min, buckets_max
 
 
-def _batch_examples(dataset: tf.Dataset, batch_size: int, max_length: int, min_boundary: Optional[int]=256) -> tf.Dataset:
+def _batch_examples(dataset: tf.data.Dataset, batch_size: int, max_length: int, min_boundary: Optional[int]=256) -> tf.data.Dataset:
     """Dynamically batches the samples in dataset. Buckets of similar sample length samples are 
     made. Batches are made from elements in a bucket and each sequence is padded to the max length of
     sample in the batch.
@@ -120,7 +120,7 @@ def _batch_examples(dataset: tf.Dataset, batch_size: int, max_length: int, min_b
         """Returns the size of batch for the bucket at index bucket_id."""
         return bucket_batch_sizes[bucket_id]
 
-    def batching_fn(bucket_id: int, grouped_dataset: tf.Dataset) -> tf.Dataset:
+    def batching_fn(bucket_id: int, grouped_dataset: tf.data.Dataset) -> tf.data.Dataset:
         """Batches a subset of a dataset, provided in grouped_dataset. Each element is padded 
         to the max. sequence length in the batch. Batches in same bucket may be padded to different 
         lengths.
