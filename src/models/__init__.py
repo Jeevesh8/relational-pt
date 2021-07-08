@@ -149,7 +149,7 @@ def copy_weights(
     for i, mean_over in _mapping.items():
         new_mat = jax.ops.index_update(
             new_mat,
-            [list(range(new_input_dim)), i],
+            (tuple(range(new_input_dim)), i),
             jnp.mean(jnp.take_along_axis(old_mat,
                                          jnp.array([mean_over]),
                                          axis=-1),
