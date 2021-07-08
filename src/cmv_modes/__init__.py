@@ -128,7 +128,7 @@ def _batch_examples(dataset: tf.data.Dataset, batch_size: int, max_length: int, 
         bucket_batch_size = window_size_fn(bucket_id)
 
         return grouped_dataset.padded_batch(bucket_batch_size,
-                                            padded_shapes=([None],[None],[None],[None]),
+                                            padded_shapes=([],[None],[None],[None, 3]),
                                             padding_values=(None, *tuple(data_config["pad_for"].values())))
     return dataset.apply(
         tf.data.experimental.group_by_window(
