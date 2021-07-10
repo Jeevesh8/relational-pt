@@ -63,7 +63,7 @@ def get_transition_mat(
 
     print("Initialized Transition matrix(from-to):")
     print(random_transition_mat)
-    
+
     return jnp.transpose(jnp.array(random_transition_mat))
 
 
