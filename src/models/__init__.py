@@ -18,15 +18,9 @@ def comp_prediction_loss(logits, lengths, label_tags):
 def get_log_energies(embds, choice_mask, attention_mask, max_comps, embed_dim,
                      n_rels):
 
-    embds = hk.Linear(embed_dim)(
-            jax.nn.relu(
-                hk.Conv1D(embed_dim, 128)(
-                    jax.nn.relu(
-                        hk.Conv1D(embed_dim, 128)(embds)
-                        )
-                    )
-                )
-            )
+    embds = hk.Linear(embed_dim)(jax.nn.relu(
+        hk.Conv1D(embed_dim,
+                  128)(jax.nn.relu(hk.Conv1D(embed_dim, 128)(embds)))))
 
     rel_model = relational_model(n_rels=n_rels,
                                  max_comps=max_comps,
