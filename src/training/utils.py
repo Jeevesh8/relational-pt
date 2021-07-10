@@ -31,6 +31,9 @@ def relational_metric(prediction: List[List[int]],
     for elem in reference:
         set_reference.add(tuple(elem))
 
+    print("Reference relations:", set_reference)
+    print("Predicted relations:", set_prediction)
+    
     return len(set_prediction.intersection(set_reference)), len(
         set_prediction.union(set_reference))
 

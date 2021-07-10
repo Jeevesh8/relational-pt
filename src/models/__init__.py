@@ -14,13 +14,22 @@ from src.globals import stable_config
 def comp_prediction_loss(logits, lengths, label_tags):
     return crf_layer(n_classes=2)(hk.Linear(2)(logits), lengths, label_tags)
 
+def get_log_energies(embds, choice_mask, attention_mask, max_comps, embed_dim, n_rels):
 
-def relation_prediction_loss(embds, choice_mask, label_relations, max_comps,
+    embds = hk.MultiHeadAttention(num_heads=12, key_size=embed_dim,
+                                  w_init_scale=1.0)(embds, embds, embds, attention_mask)
+
+    rel_model = relational_model(n_rels=n_rels,
+                                 max_comps=max_comps,
+                                 embed_dim=embed_dim)
+
+    log_energies = rel_model(embds, choice_mask)
+
+    return log_energies
+
+def relation_prediction_loss(embds, choice_mask, attention_mask, label_relations, max_comps,
                              embed_dim):
-    model1 = relational_model(n_rels=1,
-                              max_comps=max_comps,
-                              embed_dim=embed_dim)
-    log_energies = model1(embds, choice_mask)
+    log_energies = get_log_energies(embds, choice_mask, attention_mask, max_comps, embed_dim, 1) 
     return tree_crf().disc_loss(log_energies, label_relations)
 
 
@@ -36,11 +45,8 @@ def predict_components(logits, lengths):
         hk.Linear(2)(logits), lengths)[0]
 
 
-def predict_relations(embds, choice_mask, max_comps, embed_dim):
-    model1 = relational_model(n_rels=1,
-                              max_comps=max_comps,
-                              embed_dim=embed_dim)
-    log_energies = model1(embds, choice_mask)
+def predict_relations(embds, choice_mask, attention_mask, max_comps, embed_dim):
+    log_energies = get_log_energies(embds, choice_mask, attention_mask, max_comps, embed_dim, 1)
     return tree_crf().mst(log_energies)[1]
 
 
@@ -68,12 +74,9 @@ def ft_comp_prediction_loss(logits, lengths, label_tags):
                                            lengths, label_tags)
 
 
-def ft_relation_prediction_loss(embds, choice_mask, label_relations, max_comps,
+def ft_relation_prediction_loss(embds, choice_mask, attention_mask, label_relations, max_comps,
                                 embed_dim):
-    model1 = relational_model(n_rels=_n_rels,
-                              max_comps=max_comps,
-                              embed_dim=embed_dim)
-    log_energies = model1(embds, choice_mask)
+    log_energies = get_log_energies(embds, choice_mask, attention_mask, max_comps, embed_dim, _n_rels)
     return tree_crf().disc_loss(log_energies, label_relations)
 
 
@@ -89,11 +92,8 @@ def ft_predict_components(logits, lengths):
         hk.Linear(_n_classes)(logits), lengths)[0]
 
 
-def ft_predict_relations(embds, choice_mask, max_comps, embed_dim):
-    model1 = relational_model(n_rels=_n_rels,
-                              max_comps=max_comps,
-                              embed_dim=embed_dim)
-    log_energies = model1(embds, choice_mask)
+def ft_predict_relations(embds, choice_mask, attention_mask, max_comps, embed_dim):
+    log_energies = get_log_energies(embds, choice_mask, attention_mask, max_comps, embed_dim, _n_rels)
     return tree_crf().mst(log_energies)[1]
 
 

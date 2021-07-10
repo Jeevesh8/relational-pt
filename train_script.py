@@ -77,6 +77,7 @@ def train_step(state, batch, key):
             key,
             embds,
             batch.post_tags == state.config["post_tags"]["B"],
+            attention_mask,
             batch.relations,
         )
 
@@ -128,6 +129,7 @@ def get_rel_preds(state, batch):
         jax.random.PRNGKey(42),
         embds,
         batch.post_tags == state.config["post_tags"]["B"],
+        attention_mask,
     )
     return rel_preds
 
