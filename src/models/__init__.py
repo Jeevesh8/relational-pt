@@ -19,7 +19,8 @@ def get_log_energies(embds, choice_mask, attention_mask, max_comps, embed_dim,
                      n_rels):
 
     mha_attention_mask = jnp.array(attention_mask, dtype=jnp.bool_)
-    mha_attention_mask = jnp.expand_dims(attention_mask, axis=-1)*jnp.expand_dims(attention_mask, axis=-2)
+    mha_attention_mask = jnp.expand_dims(
+        attention_mask, axis=-1) * jnp.expand_dims(attention_mask, axis=-2)
     mha_attention_mask = jnp.logical_not(mha_attention_mask)
 
     embds = hk.MultiHeadAttention(num_heads=1,
