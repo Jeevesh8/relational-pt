@@ -18,15 +18,15 @@ def comp_prediction_loss(logits, lengths, label_tags):
 def get_log_energies(embds, choice_mask, attention_mask, max_comps, embed_dim,
                      n_rels):
 
-    mha_attention_mask = jnp.array(attention_mask, dtype=jnp.bool_)
-    mha_attention_mask = jnp.expand_dims(attention_mask, axis=-1)*jnp.expand_dims(attention_mask, axis=-2)
-    mha_attention_mask = jnp.logical_not(mha_attention_mask)
-
-    embds = hk.MultiHeadAttention(num_heads=1,
-                                  key_size=embed_dim,
-                                  w_init_scale=1.0)(embds, embds, embds,
-                                                    mha_attention_mask)
-    embds = hk.Linear(embed_dim)(embds)
+    embds = hk.Linear(embed_dim)(
+            jax.nn.relu(
+                hk.Conv1D(embed_dim, 128)(
+                    jax.nn.relu(
+                        hk.Conv1D(embed_dim, 128)(embds)
+                        )
+                    )
+                )
+            )
 
     rel_model = relational_model(n_rels=n_rels,
                                  max_comps=max_comps,
