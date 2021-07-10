@@ -27,7 +27,7 @@ config = {
     "save_model_file":
     "../relational_pretrained.wts",
     "arg_mining_ft":
-    True,
+    False,
 }
 
 n_samples = 0

@@ -205,6 +205,7 @@ def get_params_dict(key, base_model, all_dicts: bool = False) -> dict:
     key, subkey = jax.random.split(key)
     params["relation_predictor"] = pure_rpl.init(subkey, sample_logits,
                                                  sample_comp_labels == 0,
+                                                 jnp.zeros((config["batch_size"], stable_config["max_len"], stable_config["max_len"])),
                                                  sample_relations)
 
     params["embds_params"] = base_model.params
