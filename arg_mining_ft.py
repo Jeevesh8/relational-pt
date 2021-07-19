@@ -47,8 +47,6 @@ def train_step(state, batch, key):
             train=True,
         )["last_hidden_state"]
 
-        logits = jax.nn.normalize(logits)
-
         return state.comp_prediction_loss(params["comp_predictor"], key,
                                           logits, lengths,
                                           batch.comp_type_labels)
@@ -69,8 +67,6 @@ def train_step(state, batch, key):
             dropout_rng=subkey,
             train=True,
         )["last_hidden_state"]
-
-        embds = jax.nn.normalize(embds)
 
         return state.relation_prediction_loss(
             params["relation_predictor"],
@@ -111,8 +107,6 @@ def get_comp_preds(state, batch):
         train=False,
     )["last_hidden_state"]
 
-    logits = jax.nn.normalize(logits)
-
     comp_preds = state.comp_predictor(state.params["comp_predictor"],
                                       jax.random.PRNGKey(42), logits, lengths)
     return comp_preds, lengths
@@ -131,8 +125,6 @@ def get_rel_preds(state, batch):
         params=state.params["embds_params"],
         train=False,
     )["last_hidden_state"]
-
-    embds = jax.nn.normalize(embds)
 
     rel_preds = state.relation_predictor(
         state.params["relation_predictor"],

@@ -112,26 +112,29 @@ class relational_model(hk.Module):
         choices = jnp.sort(
             jnp.where(choice_mask, jnp.arange(num_all_embds), num_all_embds))
 
-        indices = choices[:(self.max_comps - 1)]
+        indices = jnp.where(choices[:(self.max_comps - 1)]==num_all_embds, -1, choices[:(self.max_comps-1)])+1
+        lower_indices = jax.ops.index_update(jnp.roll(indices, shift=(1,), axis=(0,)), (0,), 0)
 
-        embds = jnp.pad(embds, pad_width=((0, 1), (0, 0)))
-
-        from_embds = jnp.take_along_axis(embds,
-                                         jnp.expand_dims(indices, axis=-1),
-                                         axis=0)
+        from_embds, _ = jax.lax.scan(lambda carry, i: (jnp.where(jnp.expand_dims(jnp.logical_and(lower_indices<=i, i<indices), axis=-1),
+                                                                 embds[i]+carry, carry), 0),
+                                     init=jnp.zeros((indices.shape[0], embds.shape[-1]), dtype=embds.dtype),
+                                     xs=jnp.arange(embds.shape[0]))
+        
+        from_embds = from_embds/jnp.expand_dims(jnp.where(indices-lower_indices, indices-lower_indices, 1), axis=-1)
 
         from_embds = jnp.pad(
             from_embds,
             pad_width=((1, 0), (0, 0)),
-            constant_values=((1, 0), (0, 0)),
+            constant_values=((1/jnp.shape(embds)[-1], 0), (0, 0)),
         )
-
+        
+                
         to_embds = jnp.reshape(self.w(from_embds),
                                (-1, self.embed_dim, self.n_rels))
 
         log_energies = jnp.dot(from_embds, to_embds)
 
-        pad_mask = jnp.pad(indices != num_all_embds,
+        pad_mask = jnp.pad(indices != 0,
                            pad_width=(1, 0),
                            constant_values=1)
 
