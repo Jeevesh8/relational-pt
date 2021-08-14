@@ -4,7 +4,12 @@ from typing import Any, List, Dict, Tuple, Optional, Union
 
 from .configs import config, tokenizer
 from .component_generator import generate_components
-from .utils import convert_outputs_to_tensors, get_rel_type_idx, modified_mask_encodings, reencode_mask_tokens
+from .utils import (
+    convert_outputs_to_tensors,
+    get_rel_type_idx,
+    modified_mask_encodings,
+    reencode_mask_tokens,
+)
 
 
 def get_arg_comp_lis(comp_type: str, length: int) -> List[str]:
@@ -59,7 +64,7 @@ def find_last_to_last(lis, elem_set) -> int:
 
 def get_tokenized_thread(
     filename: str,
-    mask_tokens: Optional[List[str]]=None
+    mask_tokens: Optional[List[str]] = None
 ) -> Tuple[List[str], Dict[str, int], Dict[str, int], Dict[str, Tuple[
         str, str]], Dict[str, int], Dict[str, str], ]:
     """Returns the tokenized version of thread present in filename. File must be an xml file of cmv-modes data.
@@ -99,8 +104,8 @@ def get_tokenized_thread(
             break
 
         if mask_tokens is not None:
-            encoding, mask_encoding = reencode_mask_tokens(encoding, tokenizer,
-                                                           mask_tokens)
+            encoding, mask_encoding = reencode_mask_tokens(
+                encoding, tokenizer, mask_tokens)
             masked_thread += mask_encoding
         else:
             masked_thread += encoding
@@ -110,7 +115,7 @@ def get_tokenized_thread(
             end_positions[comp_id] = len(tokenized_thread) + len(encoding)
             ref_n_rel_type[comp_id] = (refers, rel_type)
             comp_types[comp_id] = comp_type
-        
+
         tokenized_thread += encoding
 
         if len(begin_positions) >= config["max_comps"] - 1:
@@ -234,7 +239,8 @@ def get_thread_with_labels(
     )
 
 
-def get_model_inputs(file_lis: Union[List[str], str], mask_tokens: Optional[List[str]]=None):
+def get_model_inputs(file_lis: Union[List[str], str],
+                     mask_tokens: Optional[List[str]] = None):
     if type(file_lis) is str:
         if not os.path.isdir(file_lis):
             raise ValueError(
@@ -244,4 +250,5 @@ def get_model_inputs(file_lis: Union[List[str], str], mask_tokens: Optional[List
     for filename in file_lis:
         if not (os.path.isfile(filename) and filename.endswith(".xml")):
             continue
-        yield (tf.constant(filename), *get_thread_with_labels(filename, mask_tokens))
+        yield (tf.constant(filename),
+               *get_thread_with_labels(filename, mask_tokens))
