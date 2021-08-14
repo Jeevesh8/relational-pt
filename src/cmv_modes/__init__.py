@@ -41,7 +41,8 @@ convert_to_named_tuple = partial(convert_to_named_tuple,
                                  omit_filenames=data_config["omit_filenames"])
 
 
-def data_generator(file_list: List[str], mask_tokens: Optional[List[str]] = None):
+def data_generator(file_list: List[str],
+                   mask_tokens: Optional[List[str]] = None):
     for elem in get_model_inputs(file_list, mask_tokens):
         yield elem
 
@@ -110,7 +111,7 @@ def load_dataset(
     Args:
         cmv_modes_dir:  The directory to the version of cmv modes data from which the dataset is to be loaded.
                         If None, the data is downloaded into current working directory and v2.0 is used from there.
-        mask_tokens:    A list of strings to be masked from each thread. The masking is done in the de-tokenized string. 
+        mask_tokens:    A list of strings to be masked from each thread. The masking is done in the de-tokenized string.
                         Any instance of any string in this list in the thread will be replaced by a <mask> token.
         train_sz:       The % of total threads to include in train data. By default, all the threads are included in train_data.
         valid_sz:       The % of total threads to include in validation data.
@@ -163,9 +164,12 @@ def load_dataset(
             num_threads_added += len(op_wise_splits_lis[i])
             i += 1
 
-    train_dataset = None if len(train_files) == 0 else get_dataset(train_files, mask_tokens)
-    valid_dataset = None if len(valid_files) == 0 else get_dataset(valid_files, mask_tokens)
-    test_dataset = None if len(test_files) == 0 else get_dataset(test_files, mask_tokens)
+    train_dataset = (None if len(train_files) == 0 else get_dataset(
+        train_files, mask_tokens))
+    valid_dataset = (None if len(valid_files) == 0 else get_dataset(
+        valid_files, mask_tokens))
+    test_dataset = (None if len(test_files) == 0 else get_dataset(
+        test_files, mask_tokens))
 
     if as_numpy_iter:
         train_dataset = (None if train_dataset is None else
