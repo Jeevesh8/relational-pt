@@ -1,6 +1,6 @@
 import os, shlex, glob
 import random
-from typing import List, Dict
+from typing import List, Dict, Optional
 from collections import namedtuple
 from functools import partial
 
@@ -41,15 +41,15 @@ convert_to_named_tuple = partial(convert_to_named_tuple,
                                  omit_filenames=data_config["omit_filenames"])
 
 
-def data_generator(file_list: List[str]):
-    for elem in get_model_inputs(file_list):
+def data_generator(file_list: List[str], mask_tokens: Optional[List[str]] = None):
+    for elem in get_model_inputs(file_list, mask_tokens):
         yield elem
 
 
-def get_dataset(file_list: List[str]):
+def get_dataset(file_list: List[str], mask_tokens: Optional[List[str]] = None):
     def callable_gen():
         nonlocal file_list
-        for elem in data_generator(file_list):
+        for elem in data_generator(file_list, mask_tokens):
             yield elem
 
     return (tf.data.Dataset.from_generator(
@@ -99,6 +99,7 @@ def get_op_wise_split(filelist: List[str]) -> Dict[str, List[str]]:
 
 def load_dataset(
     cmv_modes_dir: str = None,
+    mask_tokens: Optional[List[str]] = None,
     train_sz: float = 100,
     valid_sz: float = 0,
     test_sz: float = 0,
@@ -109,6 +110,8 @@ def load_dataset(
     Args:
         cmv_modes_dir:  The directory to the version of cmv modes data from which the dataset is to be loaded.
                         If None, the data is downloaded into current working directory and v2.0 is used from there.
+        mask_tokens:    A list of strings to be masked from each thread. The masking is done in the de-tokenized string. 
+                        Any instance of any string in this list in the thread will be replaced by a <mask> token.
         train_sz:       The % of total threads to include in train data. By default, all the threads are included in train_data.
         valid_sz:       The % of total threads to include in validation data.
         test_sz:        The % of total threads to include in testing data.
@@ -160,9 +163,9 @@ def load_dataset(
             num_threads_added += len(op_wise_splits_lis[i])
             i += 1
 
-    train_dataset = None if len(train_files) == 0 else get_dataset(train_files)
-    valid_dataset = None if len(valid_files) == 0 else get_dataset(valid_files)
-    test_dataset = None if len(test_files) == 0 else get_dataset(test_files)
+    train_dataset = None if len(train_files) == 0 else get_dataset(train_files, mask_tokens)
+    valid_dataset = None if len(valid_files) == 0 else get_dataset(valid_files, mask_tokens)
+    test_dataset = None if len(test_files) == 0 else get_dataset(test_files, mask_tokens)
 
     if as_numpy_iter:
         train_dataset = (None if train_dataset is None else
