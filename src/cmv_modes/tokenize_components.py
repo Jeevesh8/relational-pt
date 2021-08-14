@@ -4,7 +4,7 @@ from typing import Any, List, Dict, Tuple, Optional, Union
 
 from .configs import config, tokenizer
 from .component_generator import generate_components
-from .utils import convert_outputs_to_tensors, get_rel_type_idx, modified_mask_encodings, reencode_mask_tokens
+from .utils import convert_outputs_to_tensors, get_rel_type_idx, reencode_mask_tokens
 
 
 def get_arg_comp_lis(comp_type: str, length: int) -> List[str]:
@@ -86,8 +86,9 @@ def get_tokenized_thread(
     ref_n_rel_type = {}
     comp_types = {}
 
-    masked_thread = tokenized_thread = [tokenizer.bos_token_id]
-
+    masked_thread = [tokenizer.bos_token_id]
+    tokenized_thread = [tokenizer.bos_token_id]
+    
     for component_tup in generate_components(filename):
         component, comp_type, comp_id, refers, rel_type = component_tup
         encoding = tokenizer.encode(component)[1:-1]
@@ -99,9 +100,10 @@ def get_tokenized_thread(
             break
 
         if mask_tokens is not None:
-            encoding, mask_encoding = reencode_mask_tokens(encoding, tokenizer,
-                                                           mask_tokens)
-            masked_thread += mask_encoding
+            encoding, masked_encoding = reencode_mask_tokens(encoding, tokenizer,
+                                                             mask_tokens)
+            encoding, masked_encoding = encoding[1:-1], masked_encoding[1:-1]
+            masked_thread += masked_encoding
         else:
             masked_thread += encoding
 

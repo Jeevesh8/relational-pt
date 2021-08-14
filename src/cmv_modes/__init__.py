@@ -16,7 +16,7 @@ from ..arg_mining_ft.params import ft_config
 cmv_modes_data = namedtuple(
     "cmv_modes_data",
     [
-        "filenames", "tokenized_threads", "comp_type_labels",
+        "filenames", "tokenized_threads", "masked_thread", "comp_type_labels",
         "refers_to_and_type"
     ],
 )
@@ -24,16 +24,16 @@ cmv_modes_data = namedtuple(
 if data_config["omit_filenames"]:
     cmv_modes_data = namedtuple(
         "cmv_modes_data",
-        ["tokenized_threads", "comp_type_labels", "refers_to_and_type"],
+        ["tokenized_threads", "masked_thread", "comp_type_labels", "refers_to_and_type"],
     )
 
 
-def convert_to_named_tuple(filenames, tokenized_threads, comp_type_labels,
-                           refers_to_and_type, omit_filenames):
+def convert_to_named_tuple(filenames, tokenized_threads, masked_thread, 
+                           comp_type_labels, refers_to_and_type, omit_filenames):
     if omit_filenames:
-        return cmv_modes_data(tokenized_threads, comp_type_labels,
+        return cmv_modes_data(tokenized_threads, masked_thread, comp_type_labels,
                               refers_to_and_type)
-    return cmv_modes_data(filenames, tokenized_threads, comp_type_labels,
+    return cmv_modes_data(filenames, tokenized_threads, masked_thread, comp_type_labels,
                           refers_to_and_type)
 
 
@@ -73,10 +73,10 @@ def get_dataset(file_list: List[str], mask_tokens: Optional[List[str]] = None):
         ft_config["batch_size"],
         padded_shapes=(
             [],
-            [stable_config["max_len"]],
-            [stable_config["max_len"]],
-            [stable_config["max_len"]],
-            [stable_config["max_len"], 3],
+            [data_config["max_len"]],
+            [data_config["max_len"]],
+            [data_config["max_len"]],
+            [data_config["max_len"], 3],
         ),
         padding_values=(None, data_config["pad_for"]["tokenized_thread"], 
                               data_config["pad_for"]["tokenized_thread"], 
