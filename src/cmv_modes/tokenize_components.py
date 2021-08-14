@@ -4,7 +4,7 @@ from typing import Any, List, Dict, Tuple, Optional, Union
 
 from .configs import config, tokenizer
 from .component_generator import generate_components
-from .utils import convert_outputs_to_tensors, get_rel_type_idx, reencode_mask_tokens
+from .utils import convert_outputs_to_tensors, get_rel_type_idx, modified_mask_encodings, reencode_mask_tokens
 
 
 def get_arg_comp_lis(comp_type: str, length: int) -> List[str]:
@@ -86,7 +86,8 @@ def get_tokenized_thread(
     ref_n_rel_type = {}
     comp_types = {}
 
-    tokenized_thread = [tokenizer.bos_token_id]
+    masked_thread = tokenized_thread = [tokenizer.bos_token_id]
+
     for component_tup in generate_components(filename):
         component, comp_type, comp_id, refers, rel_type = component_tup
         encoding = tokenizer.encode(component)[1:-1]
@@ -98,13 +99,18 @@ def get_tokenized_thread(
             break
 
         if mask_tokens is not None:
-            encoding = reencode_mask_tokens(encoding, tokenizer,
-                                            mask_tokens)[1]
+            encoding, mask_encoding = reencode_mask_tokens(encoding, tokenizer,
+                                                           mask_tokens)
+            masked_thread += mask_encoding
+        else:
+            masked_thread += encoding
+
         if comp_type in ["claim", "premise"]:
             begin_positions[comp_id] = len(tokenized_thread)
             end_positions[comp_id] = len(tokenized_thread) + len(encoding)
             ref_n_rel_type[comp_id] = (refers, rel_type)
             comp_types[comp_id] = comp_type
+        
         tokenized_thread += encoding
 
         if len(begin_positions) >= config["max_comps"] - 1:
@@ -112,9 +118,11 @@ def get_tokenized_thread(
             break
 
     tokenized_thread.append(tokenizer.eos_token_id)
+    masked_thread.append(tokenizer.eos_token_id)
 
     return (
         tokenized_thread,
+        masked_thread,
         begin_positions,
         ref_n_rel_type,
         end_positions,
@@ -156,6 +164,7 @@ def get_thread_with_labels(
         mask_tokens:    A list of tokens to mask.
     Returns a tuple having:
         tokenized_thread:     A 1-D integer List containing the input_ids output by tokenizer for the text in filename.
+        masked_thread:        A 1-D integer List with the ids corresponding to the tokens provided in mask_tokens masked from the tokenized_thread.
         comp_type_labels:     A 1-D integer List containing labels for the type of component(other, begin-claim, inter-claim..) [size = len(tokenized_thread)]
         refers_to_and_type:   A 2-D integer List where a single entry [i,j,k] corresponds to a link of type k from i-th component to j-th component.
                               Component numbers are 1-indexed. A link to component 0, means linked to no component. Single component can be linked to multiple
@@ -163,6 +172,7 @@ def get_thread_with_labels(
     """
     (
         tokenized_thread,
+        masked_thread,
         begin_positions,
         ref_n_rel_type,
         end_positions,
@@ -218,6 +228,7 @@ def get_thread_with_labels(
 
     return (
         tokenized_thread,
+        masked_thread,
         comp_type_labels,
         refer_to_and_type,
     )

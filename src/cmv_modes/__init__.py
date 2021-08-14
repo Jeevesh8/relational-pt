@@ -61,6 +61,9 @@ def get_dataset(file_list: List[str], mask_tokens: Optional[List[str]] = None):
                           name="tokenized_threads"),
             tf.TensorSpec(shape=(None),
                           dtype=tf.int32,
+                          name="masked_threads"),
+            tf.TensorSpec(shape=(None),
+                          dtype=tf.int32,
                           name="comp_type_labels"),
             tf.TensorSpec(shape=(None, 3),
                           dtype=tf.int32,
@@ -72,9 +75,14 @@ def get_dataset(file_list: List[str], mask_tokens: Optional[List[str]] = None):
             [],
             [stable_config["max_len"]],
             [stable_config["max_len"]],
+            [stable_config["max_len"]],
             [stable_config["max_len"], 3],
         ),
-        padding_values=(None, *tuple(data_config["pad_for"].values())),
+        padding_values=(None, data_config["pad_for"]["tokenized_thread"], 
+                              data_config["pad_for"]["tokenized_thread"], 
+                              data_config["pad_for"]["comp_type_labels"], 
+                              data_config["pad_for"]["refers_to_and_type"]),
+    
     ).batch(stable_config["num_devices"],
             drop_remainder=True).map(convert_to_named_tuple))
 
@@ -111,7 +119,7 @@ def load_dataset(
         cmv_modes_dir:  The directory to the version of cmv modes data from which the dataset is to be loaded.
                         If None, the data is downloaded into current working directory and v2.0 is used from there.
         mask_tokens:    A list of strings to be masked from each thread. The masking is done in the de-tokenized string. 
-                        Any instance of any string in this list in the thread will be replaced by a <mask> token.
+                        Any instance of any string in this list in the thread will be replaced by apt number of <mask> tokens.
         train_sz:       The % of total threads to include in train data. By default, all the threads are included in train_data.
         valid_sz:       The % of total threads to include in validation data.
         test_sz:        The % of total threads to include in testing data.
