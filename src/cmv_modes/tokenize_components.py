@@ -59,7 +59,7 @@ def find_last_to_last(lis, elem_set) -> int:
 
 def get_tokenized_thread(
     filename: str,
-    mask_tokens: Optional[List[str]]=None
+    mask_tokens: Optional[List[str]] = None
 ) -> Tuple[List[str], Dict[str, int], Dict[str, int], Dict[str, Tuple[
         str, str]], Dict[str, int], Dict[str, str], ]:
     """Returns the tokenized version of thread present in filename. File must be an xml file of cmv-modes data.
@@ -223,7 +223,8 @@ def get_thread_with_labels(
     )
 
 
-def get_model_inputs(file_lis: Union[List[str], str], mask_tokens: Optional[List[str]]=None):
+def get_model_inputs(file_lis: Union[List[str], str],
+                     mask_tokens: Optional[List[str]] = None):
     if type(file_lis) is str:
         if not os.path.isdir(file_lis):
             raise ValueError(
@@ -233,4 +234,5 @@ def get_model_inputs(file_lis: Union[List[str], str], mask_tokens: Optional[List
     for filename in file_lis:
         if not (os.path.isfile(filename) and filename.endswith(".xml")):
             continue
-        yield (tf.constant(filename), *get_thread_with_labels(filename, mask_tokens))
+        yield (tf.constant(filename),
+               *get_thread_with_labels(filename, mask_tokens))
