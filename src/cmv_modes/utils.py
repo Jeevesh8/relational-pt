@@ -125,7 +125,8 @@ def modified_mask_encodings(
 
             new_txt_parts.append(iter_txt[idx:idx + len(marker)])
 
-            if not has_space(iter_txt, idx + len(marker) -1, preceeding=False):
+            if not has_space(iter_txt, idx + len(marker) - 1,
+                             preceeding=False):
                 new_txt_parts.append(" ")
 
             # Form the sequence to mask for the detected marker.
